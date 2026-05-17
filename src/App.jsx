@@ -57,7 +57,7 @@ const App = () => {
   const [showPassModal, setShowPassModal] = useState(false);
   const [modal, setModal] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
   
-  const ADMIN_PASSWORD = "admin123"; 
+  const ADMIN_PASSWORD = "admin767442"; 
 
   const [exams, setExams] = useState([]);
   const [submissions, setSubmissions] = useState([]);
