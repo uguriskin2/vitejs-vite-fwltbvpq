@@ -24,8 +24,10 @@ const IconSmartphone = ({size=14, className=""}) => <svg className={className} w
 const IconBookOpen = ({size=40, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
 const IconClock = ({size=40, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
 const IconCheckCircle = ({size=32, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+const IconXCircle = ({size=32, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>;
 const IconSend = ({size=40, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>;
 const IconActivity = ({size=64, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+const IconActivitySmall = ({size=32, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
 const IconFileText = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
 
 // --- Firebase Yapılandırması ---
@@ -49,6 +51,37 @@ const getInitialQuestion = () => ({
   pairs: [{left: '', right: ''}, {left: '', right: ''}, {left: '', right: ''}] 
 });
 
+// --- Yardımcı Fonksiyonlar: Doğru/Yanlış Cevap Metinleri ---
+const getCorrectAnswerText = (q) => {
+    if (q.type === 'multiple-choice') return String.fromCharCode(65 + q.correct) + " - " + q.options[q.correct];
+    if (q.type === 'true-false') return q.correct === 0 ? 'DOĞRU' : 'YANLIŞ';
+    if (q.type === 'short-answer') return q.correctText;
+    if (q.type === 'matching') return q.pairs.map(p => `${p.left} ➔ ${p.right}`).join(" | ");
+    return "";
+};
+
+const getGivenAnswerText = (q, ans) => {
+    if (ans === undefined || ans === null || ans === '') return 'Boş Bırakıldı';
+    if (q.type === 'multiple-choice') return String.fromCharCode(65 + ans) + " - " + q.options[ans];
+    if (q.type === 'true-false') return ans === 0 ? 'DOĞRU' : 'YANLIŞ';
+    if (q.type === 'short-answer') return String(ans);
+    if (q.type === 'matching') {
+        if (typeof ans === 'object') return Object.entries(ans).map(([k, v]) => `${k} ➔ ${v}`).join(" | ");
+        return String(ans);
+    }
+    return String(ans);
+};
+
+// --- Yardımcı Fonksiyon: Soruları Karıştır ---
+const shuffleArray = (array) => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+};
+
 const App = () => {
   const [user, setUser] = useState(null);
   const [view, setView] = useState('landing');
@@ -57,7 +90,7 @@ const App = () => {
   const [showPassModal, setShowPassModal] = useState(false);
   const [modal, setModal] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
   
-  const ADMIN_PASSWORD = "admin767442"; 
+  const ADMIN_PASSWORD = "admin123"; 
 
   const [exams, setExams] = useState([]);
   const [submissions, setSubmissions] = useState([]);
@@ -65,15 +98,12 @@ const App = () => {
   const [aiProcessing, setAiProcessing] = useState(false);
   const [deviceId, setDeviceId] = useState('');
   
-  // Şifrenin iptal olmaması için API anahtarını arayüzden alıyoruz
   const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
   
-  // YENİ: Sınav Kodu (examCode) eklendi
   const [newExam, setNewExam] = useState({ title: '', duration: 30, examCode: '', questions: [] });
   const [aiText, setAiText] = useState('');
   const [aiConfig, setAiConfig] = useState({ count: 10, types: ['multiple-choice'] });
 
-  // PDF İşlemleri
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfName, setPdfName] = useState('');
   const [pageRange, setPageRange] = useState('');
@@ -81,15 +111,15 @@ const App = () => {
   const [currentQuestion, setCurrentQuestion] = useState(getInitialQuestion());
   const [activeExam, setActiveExam] = useState(null);
   
-  // ÖĞRENCİ BİLGİLERİ
+  // ÖĞRENCİ BİLGİLERİ VE SONUÇ DURUMU
   const [studentName, setStudentName] = useState('');
   const [studentNumber, setStudentNumber] = useState('');
-  const [studentExamCode, setStudentExamCode] = useState(''); // Öğrencinin girdiği kod
-  
+  const [studentExamCode, setStudentExamCode] = useState(''); 
   const [answers, setAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(0);
+  const [examResult, setExamResult] = useState(null); // YENİ: Öğrencinin sınav sonucu
 
-  // --- Yükleme Ekranı Güvenlik Kilidi (Sonsuz yüklemeyi önler) ---
+  // Yükleme Ekranı Kilidi
   useEffect(() => {
     const forceUnlock = setTimeout(() => {
       setLoading(false);
@@ -111,7 +141,7 @@ const App = () => {
     } catch (e) {}
   }, []);
 
-  // --- API BAĞLANTISI (Güvenlik Korumalı) ---
+  // --- API BAĞLANTISI ---
   async function callGemini(prompt, systemInstruction = "", pdfBase64 = null) {
     const currentKey = geminiKey ? geminiKey.trim() : "";
 
@@ -199,7 +229,7 @@ const App = () => {
   useEffect(() => {
     let isMounted = true;
     const initAuth = async () => {
-      try { await signInAnonymously(auth); } catch (e) { console.warn("Anonim giriş başarısız", e); }
+      try { await signInAnonymously(auth); } catch (e) {}
     };
     initAuth();
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -252,7 +282,6 @@ const App = () => {
     } else showModal("Hata", "Yanlış şifre!", "error");
   };
 
-  // Öğretmen için sadece site linki ve kodu veren fonksiyon
   const handleCopyLink = (e, exam) => {
     e.stopPropagation();
     const link = window.location.origin + window.location.pathname + "?view=student";
@@ -280,15 +309,8 @@ const App = () => {
   const handleFileUpload = (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      
-      if (file.type !== 'application/pdf') {
-          showModal("Hata", "Lütfen sadece PDF dosyası yükleyin.", "error");
-          return;
-      }
-      if (file.size > 5 * 1024 * 1024) { 
-          showModal("Hata", "Dosya boyutu çok büyük. Lütfen en fazla 5MB olan bir PDF seçin.", "error");
-          return;
-      }
+      if (file.type !== 'application/pdf') { showModal("Hata", "Lütfen sadece PDF dosyası yükleyin.", "error"); return; }
+      if (file.size > 5 * 1024 * 1024) { showModal("Hata", "Dosya boyutu çok büyük. Lütfen en fazla 5MB olan bir PDF seçin.", "error"); return; }
       setPdfName(file.name);
       const reader = new FileReader();
       reader.onloadend = () => { setPdfFile(reader.result); };
@@ -296,23 +318,15 @@ const App = () => {
   };
 
   const generateWithAI = async () => {
-    if (!geminiKey || geminiKey.trim() === "") {
-        showModal("API Anahtarı Eksik", "Lütfen AI Sihirbazı panelindeki kutucuğa Google Gemini API Anahtarınızı girin.", "error");
-        return;
-    }
-    if (!aiText.trim() && !pdfFile) {
-        showModal("Eksik", "Lütfen metin girin veya bir PDF dosyası yükleyin.", "error");
-        return;
-    }
+    if (!geminiKey || geminiKey.trim() === "") { showModal("API Anahtarı Eksik", "Lütfen AI Sihirbazı panelindeki kutucuğa Google Gemini API Anahtarınızı girin.", "error"); return; }
+    if (!aiText.trim() && !pdfFile) { showModal("Eksik", "Lütfen metin girin veya bir PDF dosyası yükleyin.", "error"); return; }
     
     setAiProcessing(true);
     try {
       const typeStr = aiConfig.types.join(", ");
       let instruction = `Sen profesyonel bir sınav hazırlayıcısın. Görevin verilen metinden veya ekli PDF belgesinden tam olarak ${aiConfig.count} adet soru üretmektir. İstenilen soru türleri: ${typeStr}.`;
 
-      if (pdfFile && pageRange.trim()) {
-          instruction += `\nÖNEMLİ DİKKAT: Ekli PDF dosyasının SADECE şu sayfalarındaki veya şu kısımlarındaki bilgileri kullanarak soru üret: "${pageRange}"`;
-      }
+      if (pdfFile && pageRange.trim()) { instruction += `\nÖNEMLİ DİKKAT: Ekli PDF dosyasının SADECE şu sayfalarındaki veya şu kısımlarındaki bilgileri kullanarak soru üret: "${pageRange}"`; }
 
       instruction += `\nYanıt SADECE VE SADECE geçerli bir JSON dizisi olmalıdır. JSON formatı dışında başında veya sonunda hiçbir metin, markdown (\`\`\`json) veya açıklama ekleme. JSON içindeki anahtarlar ve değerler mutlaka ÇİFT TIRNAK (") ile sarılmalıdır. Soru metni içinde tırnak işareti kullanman gerekirse mutlaka tek tırnak (') kullan, çift tırnak kullanma. Kesinlikle sondaki elemandan sonra fazladan virgül koyma. Format Örneği: [{"text": "Soru metni", "topic": "Konu", "type": "multiple-choice", "options": ["A", "B", "C", "D"], "correct": 0, "correctText": "", "pairs": [{"left": "Terim", "right": "Açıklama"}]}]`;
       
@@ -321,40 +335,28 @@ const App = () => {
       const cleanRes = res.replace(/```json/gi, '').replace(/```/g, '').trim();
       const jsonMatch = cleanRes.match(/\[[\s\S]*\]/);
       
-      if (!jsonMatch) {
-          throw new Error("Yapay zeka geçerli bir soru formatı (JSON) üretemedi. Lütfen işlemi tekrar başlatın.");
-      }
+      if (!jsonMatch) throw new Error("Yapay zeka geçerli bir soru formatı (JSON) üretemedi. Lütfen işlemi tekrar başlatın.");
 
       try {
           const questions = JSON.parse(jsonMatch[0]);
           setNewExam(prev => ({ ...prev, questions: [...(prev.questions || []), ...questions] }));
           setAiText(''); setPdfFile(null); setPdfName(''); setPageRange('');
       } catch (parseError) {
-          console.error("Parse Edilemeyen Veri:", jsonMatch[0]);
           throw new Error("Yapay zeka soruları yazarken noktalama kurallarına uymadı (Format Hatası). Lütfen 'Oluştur' butonuna tekrar basın.");
       }
 
     } catch (e) { 
-        if (e.message === "API_KEY_ERROR") {
-             showModal("Geçersiz Şifre", "Girdiğiniz API Anahtarı iptal edilmiş veya hatalı. Lütfen Google AI Studio'dan yeni bir anahtar alıp kutucuğa yapıştırın.", "error");
-        } else if (e.message.includes("DEMO_MODE_TRIGGER")) {
+        if (e.message === "API_KEY_ERROR") { showModal("Geçersiz Şifre", "Girdiğiniz API Anahtarı iptal edilmiş veya hatalı. Lütfen Google AI Studio'dan yeni bir anahtar alıp kutucuğa yapıştırın.", "error"); } 
+        else if (e.message.includes("DEMO_MODE_TRIGGER")) {
              const demoQuestions = [
                  { text: "Türkiye'nin başkenti neresidir?", topic: "Coğrafya", type: "multiple-choice", options: ["İstanbul", "Ankara", "İzmir", "Antalya"], correct: 1, correctText: "", pairs: [{left: '', right: ''}] },
                  { text: "H2O hangi bileşiğin kimyasal formülüdür?", topic: "Kimya", type: "short-answer", options: ['', '', '', ''], correct: 0, correctText: "Su", pairs: [{left: '', right: ''}] },
                  { text: "Aşağıdaki tarihleri önemli olaylarla eşleştirin:", topic: "Tarih", type: "matching", options: ['', '', '', ''], correct: 0, correctText: "", pairs: [{left: "1923", right: "Cumhuriyetin İlanı"}, {left: "1920", right: "TBMM'nin Açılışı"}, {left: "1453", right: "İstanbul'un Fethi"}] }
              ];
-             
              setNewExam(prev => ({ ...prev, questions: [...(prev.questions || []), ...demoQuestions] }));
              setAiText(''); setPdfFile(null); setPdfName(''); setPageRange('');
-             
-             showModal(
-                "🚀 Örnek Sorular Yüklendi", 
-                "Sistem çalışıyor ancak girdiğiniz Google API şifresi şu an yetkisiz olduğu için gerçek yapay zeka bağlantısı kurulamadı.\n\nSistemi test edebilmeniz için taslağınıza otomatik olarak 'Örnek Sorular' eklendi. Sınavı yayınlayıp test edebilirsiniz!", 
-                "success"
-             );
-        } else {
-             showModal("Hata Oluştu", e.message || "Bilinmeyen bir hata oluştu.", "error"); 
-        }
+             showModal("🚀 Örnek Sorular Yüklendi", "Sistem çalışıyor ancak girdiğiniz Google API şifresi şu an yetkisiz olduğu için gerçek yapay zeka bağlantısı kurulamadı.\n\nSistemi test edebilmeniz için taslağınıza otomatik olarak 'Örnek Sorular' eklendi. Sınavı yayınlayıp test edebilirsiniz!", "success");
+        } else { showModal("Hata Oluştu", e.message || "Bilinmeyen bir hata oluştu.", "error"); }
     }
     finally { setAiProcessing(false); }
   };
@@ -382,21 +384,23 @@ const App = () => {
     }
   };
 
-  // Öğrencinin KOD ile sınava giriş yapmasını sağlayan fonksiyon
   const handleStudentStart = () => {
     if(!studentName || !studentNumber || !studentExamCode) {
-        showModal("Eksik Bilgi", "Lütfen adınızı, numaranızı ve öğretmenin verdiği Sınav Kodunu eksiksiz girin.", "error");
+        showModal("Eksik Bilgi", "Lütfen adınızı, numaranızı ve Sınav Kodunu eksiksiz girin.", "error");
         return;
     }
     
     const foundExam = exams.find(e => e.examCode && e.examCode.toUpperCase() === studentExamCode.toUpperCase());
     
     if (!foundExam) {
-        showModal("Hatalı Kod", `"${studentExamCode}" koduna ait bir sınav bulunamadı. Lütfen giriş kodunu kontrol edin.`, "error");
+        showModal("Hatalı Kod", `"${studentExamCode}" koduna ait bir sınav bulunamadı.`, "error");
         return;
     }
     
-    setActiveExam(foundExam); 
+    // YENİ: Soru sırasını her öğrenci için karıştır (Randomize)
+    const shuffledQuestions = shuffleArray(foundExam.questions || []);
+    
+    setActiveExam({...foundExam, questions: shuffledQuestions}); 
     setAnswers({}); 
     setTimeLeft(foundExam.duration * 60); 
     setView('exam');
@@ -405,6 +409,8 @@ const App = () => {
   const handleFinishExam = async () => {
     if (!activeExam) return;
     let score = 0;
+    
+    // YENİ: Hem sonucu hesapla hem de PDF çıktısı için cevapları formatla
     const questionDetails = (activeExam.questions || []).map((q, idx) => {
       const ans = answers[idx];
       let isCorrect = false;
@@ -412,23 +418,35 @@ const App = () => {
       else if (q.type === 'matching') isCorrect = q.pairs?.every(p => ans?.[p.left] === p.right);
       else isCorrect = parseInt(ans) === q.correct;
       if (isCorrect) score++;
-      return { topic: q.topic || 'Genel', isCorrect };
+      
+      return { 
+          topic: q.topic || 'Genel', 
+          isCorrect,
+          questionText: q.text,
+          givenAnswerText: getGivenAnswerText(q, ans),
+          correctAnswerText: getCorrectAnswerText(q)
+      };
     });
+
+    const finalScorePercentage = (score / activeExam.questions.length) * 100;
 
     const submissionData = {
         examId: activeExam.id, studentName, studentNumber, deviceId,
-        score: (score / activeExam.questions.length) * 100, correctCount: score,
+        score: finalScorePercentage, correctCount: score,
         totalQuestions: activeExam.questions.length, questionDetails, submittedAt: new Date().toISOString()
     };
 
+    // Öğrenciye gösterilecek sonuç ekranı verisi
+    setExamResult({ ...submissionData, details: questionDetails });
+
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'submissions'), submissionData);
-      setView('landing'); setActiveExam(null); setAnswers({}); setStudentName(''); setStudentNumber(''); setStudentExamCode('');
-      showModal("Tebrikler", "Sınavınız başarıyla kaydedildi.", "success");
+      setActiveExam(null); setAnswers({}); setStudentExamCode('');
+      setView('result'); // YENİ: Landing yerine Sonuç ekranına yönlendir
     } catch (e) {
       setSubmissions(prev => [...prev, {...submissionData, id: Date.now().toString()}]);
-      setView('landing'); setActiveExam(null); setAnswers({}); setStudentName(''); setStudentNumber(''); setStudentExamCode('');
-      showModal("Tebrikler", "Sınavınız tamamlandı (Yerel Kayıt).", "success");
+      setActiveExam(null); setAnswers({}); setStudentExamCode('');
+      setView('result');
     }
   };
 
@@ -464,7 +482,12 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col">
-      <style>{`@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white !important; } }`}</style>
+      <style>{`
+        @media print { 
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white !important; } 
+            .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+        }
+      `}</style>
       
       {modal.visible && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 print:hidden">
@@ -483,7 +506,7 @@ const App = () => {
       {aiProcessing && <div className="fixed inset-0 bg-indigo-900/40 backdrop-blur-sm z-[200] flex flex-col items-center justify-center text-white print:hidden"><IconActivity size={64} className="animate-spin mb-4" /><p className="font-black uppercase tracking-widest text-center text-sm sm:text-base">PDF/METİN OKUNUYOR<br/>SORULAR ÜRETİLİYOR...</p></div>}
 
       <nav className="bg-white border-b border-slate-200 p-4 sticky top-0 z-50 flex justify-between items-center shadow-sm print:hidden">
-        <div className="flex items-center gap-2 font-black text-xl sm:text-2xl text-indigo-600 cursor-pointer" onClick={() => setView('landing')}>
+        <div className="flex items-center gap-2 font-black text-xl sm:text-2xl text-indigo-600 cursor-pointer" onClick={() => { setView('landing'); setExamResult(null); }}>
           <div className="bg-indigo-600 p-1.5 rounded-lg text-white shadow-lg"><IconTarget size={24}/></div>
           <div className="flex flex-col">
             <span>SINAV<span className="text-slate-800">AI</span></span>
@@ -494,9 +517,9 @@ const App = () => {
           {!isTeacher ? (
             <button type="button" onClick={() => setShowPassModal(true)} className="flex items-center gap-1 sm:gap-2 font-bold text-slate-500 hover:text-indigo-600 transition-colors text-xs sm:text-base"><IconLock size={16}/> <span className="hidden sm:inline">Panel</span></button>
           ) : (
-            <><button type="button" onClick={() => setView('teacher')} className="bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-base">Yönetim</button><button type="button" onClick={() => { setIsTeacher(false); setView('landing'); }} className="flex items-center gap-1 sm:gap-2 font-bold text-red-500 px-2 transition-colors hover:text-red-700 text-xs sm:text-base"><IconLogOut size={16}/> <span className="hidden sm:inline">Çıkış</span></button></>
+            <><button type="button" onClick={() => setView('teacher')} className="bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-base">Yönetim</button><button type="button" onClick={() => { setIsTeacher(false); setView('landing'); setExamResult(null); }} className="flex items-center gap-1 sm:gap-2 font-bold text-red-500 px-2 transition-colors hover:text-red-700 text-xs sm:text-base"><IconLogOut size={16}/> <span className="hidden sm:inline">Çıkış</span></button></>
           )}
-          <button type="button" onClick={() => setView('student')} className="bg-indigo-600 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl font-black shadow-xl hover:bg-indigo-700 transition-all text-xs sm:text-base">SINAVA GİR</button>
+          <button type="button" onClick={() => { setView('student'); setExamResult(null); }} className="bg-indigo-600 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl font-black shadow-xl hover:bg-indigo-700 transition-all text-xs sm:text-base">SINAVA GİR</button>
         </div>
       </nav>
 
@@ -514,8 +537,7 @@ const App = () => {
         {view === 'landing' && (
           <div className="text-center py-10 sm:py-20 animate-in fade-in zoom-in print:hidden px-4">
             <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] sm:leading-[0.9] tracking-tighter uppercase text-slate-900">Bulut Tabanlı <br/><span className="text-indigo-600 underline decoration-indigo-200 decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8 mt-2 inline-block">Akıllı Sınav</span></h2>
-            <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-4">Sınavınızda Başarılar Dilerim.</p>
-            <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-4">Uğur ISKIN (Bilgisayar Öğretmeni)</p>
+            <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-4">Öğrencileriniz için hesap gerekmez. Sınavları AI ile hazırlayın, özel sınav koduyla güvenle paylaşın.</p>
             <button type="button" onClick={() => setView('student')} className="bg-indigo-600 text-white px-8 sm:px-12 py-4 sm:py-6 rounded-full sm:rounded-[3rem] font-black text-lg sm:text-2xl hover:scale-105 active:scale-95 transition-all shadow-xl sm:shadow-2xl flex items-center justify-center gap-3 sm:gap-4 mx-auto w-full sm:w-auto max-w-sm shadow-indigo-200"><IconUser size={28}/> SINAVA BAŞLA</button>
           </div>
         )}
@@ -540,7 +562,6 @@ const App = () => {
                     </div>
                     <button type="button" onClick={() => { setActiveExam(exam); setView('analytics'); }} className="text-left w-full h-full pt-8 lg:pt-0 pr-0 lg:pr-10">
                       <h3 className="font-black text-lg sm:text-2xl mb-2 line-clamp-2 sm:line-clamp-1 uppercase text-indigo-900 tracking-tight">{exam.title}</h3>
-                      {/* Sınav kodu öğretmen panelinde net olarak gösteriliyor */}
                       <p className="text-xs sm:text-sm font-bold text-indigo-500 mb-4 sm:mb-6 bg-indigo-50 inline-block px-2 sm:px-3 py-1 rounded-md sm:rounded-lg border border-indigo-100">KOD: {exam.examCode}</p>
                       
                       <div className="grid grid-cols-2 gap-2 text-center mb-6 sm:mb-8">
@@ -562,7 +583,6 @@ const App = () => {
                <div className="bg-white p-6 sm:p-12 rounded-2xl sm:rounded-[3.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-10"><button type="button" onClick={() => setView('teacher')} className="p-2 sm:p-3 bg-stone-50 rounded-xl sm:rounded-2xl text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><IconChevronLeft size={24}/></button><h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-stone-900">Sınav Tasarla</h2></div>
                   
-                  {/* Sınav Kodu belirleme alanı */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
                      <input className="w-full sm:col-span-1 p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border focus:border-indigo-500 transition-colors placeholder:text-slate-300" placeholder="BAŞLIK (Örn: Matematik)" value={newExam.title} onChange={e => setNewExam({...newExam, title: e.target.value.toUpperCase()})} />
                      <input className="w-full sm:col-span-1 p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border focus:border-indigo-500 transition-colors placeholder:text-slate-300" type="number" placeholder="SÜRE (DK)" value={newExam.duration} onChange={e => setNewExam({...newExam, duration: parseInt(e.target.value) || 0})} />
@@ -666,12 +686,14 @@ const App = () => {
           </div>
         )}
 
+        {/* --- YENİ: ÖĞRETMEN ANALİZ PANELİ (Cevap Kağıtları PDF Çıktısına Eklendi) --- */}
         {view === 'analytics' && activeExam && (
           <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
               <div className="flex items-center gap-3 sm:gap-4"><button type="button" onClick={() => setView('teacher')} className="p-3 sm:p-4 bg-white rounded-xl sm:rounded-3xl text-slate-400 shadow-sm sm:shadow-xl border border-slate-100 hover:scale-105 active:scale-95 transition-all"><IconChevronLeft size={24}/></button><h2 className="text-2xl sm:text-4xl font-black text-stone-900 uppercase tracking-tight line-clamp-1">{activeExam.title}</h2></div>
               <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto"><button type="button" onClick={handleExportCSV} className="flex-1 sm:flex-none justify-center bg-white text-indigo-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 border border-indigo-100 shadow-sm hover:bg-indigo-50 transition-all"><IconDownload size={16}/> EXCEL</button><button type="button" onClick={handlePrint} className="flex-1 sm:flex-none justify-center bg-slate-900 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 hover:bg-slate-800 shadow-md transition-all"><IconPrinter size={16}/> <span className="hidden sm:inline">YAZDIR /</span> PDF</button></div>
             </div>
+            
             <div id="report-content" className="space-y-6 sm:space-y-8 print:m-0 print:p-0">
               <div className="grid md:grid-cols-12 gap-6 sm:gap-8">
                  <div className="md:col-span-4 space-y-6 sm:space-y-8">
@@ -680,14 +702,14 @@ const App = () => {
                       <div className="space-y-4 sm:space-y-6">{getTopicAnalysis(activeExam.id).map((t, i) => (<div key={i}><div className="flex justify-between text-[9px] sm:text-[10px] font-black mb-1.5 sm:mb-2 uppercase text-indigo-900 tracking-wider"><span>{t.name}</span><span>%{t.percentage}</span></div><div className="w-full bg-slate-100 h-1.5 sm:h-2 rounded-full overflow-hidden border border-slate-200"><div className="bg-indigo-600 h-full transition-all duration-1000 ease-out" style={{width: t.percentage + "%"}}></div></div></div>))}</div>
                       {getTopicAnalysis(activeExam.id).length === 0 && <div className="text-center py-8 sm:py-12 border-2 border-dashed border-slate-100 rounded-xl sm:rounded-3xl"><p className="text-slate-300 font-bold uppercase text-[9px] sm:text-[10px] tracking-widest">Henüz yeterli veri yok</p></div>}
                     </div>
-                    <div className="bg-indigo-600 rounded-2xl sm:rounded-[4rem] p-8 sm:p-10 text-white text-center shadow-lg sm:shadow-2xl relative overflow-hidden">
+                    <div className="bg-indigo-600 rounded-2xl sm:rounded-[4rem] p-8 sm:p-10 text-white text-center shadow-lg sm:shadow-2xl relative overflow-hidden break-inside-avoid">
                         <div className="absolute top-0 right-0 p-4 opacity-10"><IconTarget size={100}/></div>
                         <p className="text-[9px] sm:text-[10px] font-black uppercase opacity-70 mb-2 sm:mb-4 tracking-widest relative z-10">Sınıf Ortalaması</p>
                         <p className="text-6xl sm:text-8xl font-black tracking-tighter relative z-10">%{ (submissions.filter(s=>s.examId===activeExam.id).reduce((a,b)=>a+(Number(b?.score)||0),0)/(submissions.filter(s=>s.examId===activeExam.id).length||1)).toFixed(1) }</p>
                     </div>
                  </div>
                  <div className="md:col-span-8 bg-white rounded-2xl sm:rounded-[4rem] shadow-sm border border-slate-100 overflow-hidden flex flex-col">
-                    <div className="p-5 sm:p-8 border-b border-slate-100 flex justify-between items-center bg-white"><h3 className="font-black text-lg sm:text-xl uppercase tracking-tighter text-slate-800 flex items-center gap-2"><IconUser size={20} className="text-indigo-500"/> Katılımcılar</h3><span className="text-[9px] sm:text-[10px] font-black bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1 sm:py-1.5 rounded-md sm:rounded-full uppercase tracking-widest border border-indigo-100">{submissions.filter(s=>s.examId===activeExam.id).length} Kişi</span></div>
+                    <div className="p-5 sm:p-8 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0"><h3 className="font-black text-lg sm:text-xl uppercase tracking-tighter text-slate-800 flex items-center gap-2"><IconUser size={20} className="text-indigo-500"/> Katılımcı Listesi</h3><span className="text-[9px] sm:text-[10px] font-black bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1 sm:py-1.5 rounded-md sm:rounded-full uppercase tracking-widest border border-indigo-100">{submissions.filter(s=>s.examId===activeExam.id).length} Kişi</span></div>
                     <div className="overflow-x-auto flex-1">
                         <table className="w-full text-left whitespace-nowrap min-w-[600px]">
                             <thead className="bg-slate-50 border-b uppercase text-[8px] sm:text-[10px] font-black text-slate-400 tracking-widest"><tr><th className="p-4 sm:p-6 font-bold">Öğrenci Bilgileri</th><th className="p-4 sm:p-6 text-center font-bold">Doğru / Toplam</th><th className="p-4 sm:p-6 text-center font-bold">Başarı Oranı</th><th className="p-4 sm:p-6 text-center font-bold text-slate-300">Sistem ID</th></tr></thead>
@@ -706,6 +728,47 @@ const App = () => {
                     </div>
                  </div>
               </div>
+
+              {/* YENİ: PDF İÇİN DETAYLI ÖĞRENCİ CEVAP KAĞITLARI BÖLÜMÜ */}
+              {submissions.filter(s=>s.examId===activeExam.id).length > 0 && (
+                  <div className="pt-12 sm:pt-16 mt-8 sm:mt-12 border-t-2 border-dashed border-slate-200">
+                      <h3 className="font-black text-2xl sm:text-3xl uppercase tracking-tighter text-slate-800 mb-8 sm:mb-10 text-center print:text-left print:mt-10">Öğrenci Cevap Kağıtları</h3>
+                      <div className="space-y-8 sm:space-y-12">
+                          {submissions.filter(s=>s.examId===activeExam.id).map((sub, i) => (
+                              <div key={i} className="bg-white border-2 border-slate-100 p-6 sm:p-10 rounded-2xl sm:rounded-[3rem] shadow-sm break-inside-avoid">
+                                  <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b-2 border-slate-50 pb-4 sm:pb-6 mb-6 sm:mb-8 gap-4 sm:gap-0">
+                                      <div>
+                                          <h4 className="font-black text-xl sm:text-2xl text-indigo-900 uppercase tracking-tight">{sub.studentName}</h4>
+                                          <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Öğrenci No: {sub.studentNumber} • BAŞARI: %{Number(sub.score).toFixed(1)}</p>
+                                      </div>
+                                      <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                                          <p className="text-xs sm:text-sm font-black text-slate-700">{sub.correctCount} Doğru <span className="text-slate-300 mx-1">/</span> {sub.totalQuestions} Soru</p>
+                                      </div>
+                                  </div>
+                                  <div className="space-y-4 sm:space-y-6">
+                                      {(sub.questionDetails || []).map((qd, qIdx) => (
+                                          <div key={qIdx} className="bg-slate-50 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200/60">
+                                              <p className="text-sm sm:text-base font-black text-slate-800 mb-3 sm:mb-4 uppercase leading-snug">{qIdx + 1}. {qd.questionText}</p>
+                                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                                  <div className={"p-3 sm:p-4 rounded-xl border-2 flex flex-col " + (qd.isCorrect ? "bg-green-50/50 border-green-100 text-green-800" : "bg-red-50/50 border-red-100 text-red-800")}>
+                                                      <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Öğrencinin Cevabı</span>
+                                                      <span className="font-black text-xs sm:text-sm">{qd.givenAnswerText} {qd.isCorrect ? "✅" : "❌"}</span>
+                                                  </div>
+                                                  {!qd.isCorrect && (
+                                                      <div className="p-3 sm:p-4 rounded-xl border-2 bg-indigo-50/30 border-indigo-100 text-indigo-800 flex flex-col">
+                                                          <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Doğru Cevap</span>
+                                                          <span className="font-black text-xs sm:text-sm">{qd.correctAnswerText}</span>
+                                                      </div>
+                                                  )}
+                                              </div>
+                                          </div>
+                                      ))}
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              )}
             </div>
           </div>
         )}
@@ -736,14 +799,63 @@ const App = () => {
           </div>
         )}
 
+        {/* --- YENİ: ÖĞRENCİ SINAV SONUÇ / KARNE EKRANI --- */}
+        {view === 'result' && examResult && (
+          <div className="max-w-3xl mx-auto py-6 sm:py-12 animate-in slide-in-from-bottom-8 no-print px-4">
+             <div className="bg-white p-8 sm:p-16 rounded-3xl sm:rounded-[4rem] shadow-xl sm:shadow-2xl border border-slate-100 text-center relative overflow-hidden">
+                
+                <h2 className="text-4xl sm:text-5xl font-black mb-2 uppercase tracking-tighter text-stone-900">Sınav Bitti!</h2>
+                <p className="text-xs sm:text-sm text-slate-400 font-bold uppercase tracking-widest mb-10">Tebrikler {examResult.studentName}, yanıtların kaydedildi.</p>
+                
+                <div className="flex justify-center mb-12">
+                   <div className={"w-40 h-40 sm:w-48 sm:h-48 rounded-[3rem] flex flex-col items-center justify-center shadow-inner border-8 " + (examResult.score >= 50 ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-600')}>
+                      <span className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">BAŞARI</span>
+                      <span className="text-5xl sm:text-6xl font-black tracking-tighter">%{examResult.score.toFixed(0)}</span>
+                   </div>
+                </div>
+
+                <div className="flex justify-center gap-4 sm:gap-8 mb-12">
+                    <div className="bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100"><p className="text-2xl font-black text-slate-800">{examResult.correctCount}</p><p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Doğru</p></div>
+                    <div className="bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100"><p className="text-2xl font-black text-slate-800">{examResult.totalQuestions - examResult.correctCount}</p><p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Yanlış</p></div>
+                </div>
+
+                <div className="text-left space-y-6 sm:space-y-8 border-t-2 border-dashed border-slate-200 pt-10 sm:pt-12">
+                    <h3 className="font-black text-xl sm:text-2xl uppercase text-slate-800 mb-6 text-center">Cevap Kağıdın</h3>
+                    {examResult.details.map((qd, qIdx) => (
+                        <div key={qIdx} className="bg-slate-50 p-5 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-slate-200">
+                            <p className="text-sm sm:text-base font-black text-slate-800 mb-4 uppercase leading-snug">{qIdx + 1}. {qd.questionText}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                <div className={"p-3 sm:p-4 rounded-xl border-2 flex flex-col " + (qd.isCorrect ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700")}>
+                                    <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Senin Cevabın</span>
+                                    <span className="font-black text-xs sm:text-sm">{qd.givenAnswerText} {qd.isCorrect ? "✅" : "❌"}</span>
+                                </div>
+                                {!qd.isCorrect && (
+                                    <div className="p-3 sm:p-4 rounded-xl border-2 bg-indigo-50 border-indigo-200 text-indigo-700 flex flex-col">
+                                        <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Doğru Cevap</span>
+                                        <span className="font-black text-xs sm:text-sm">{qd.correctAnswerText}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="mt-12 sm:mt-16 pt-8 border-t border-slate-100">
+                    <button type="button" onClick={() => { setView('student'); setExamResult(null); }} className="bg-slate-900 text-white px-10 py-4 sm:py-5 rounded-2xl sm:rounded-[2rem] font-black text-sm sm:text-lg shadow-xl hover:bg-slate-800 transition-all uppercase tracking-widest w-full sm:w-auto">Ana Sayfaya Dön</button>
+                </div>
+             </div>
+          </div>
+        )}
+
         {view === 'exam' && activeExam && (
           <div className="max-w-4xl mx-auto pb-20 sm:pb-32 animate-in slide-in-from-right no-print">
              <div className="bg-slate-900 text-white p-6 sm:p-12 rounded-t-3xl sm:rounded-t-[5rem] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 sm:gap-0 sticky top-0 sm:top-20 z-40 shadow-2xl border-b-4 border-indigo-500/30">
                 <div>
-                    <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight leading-tight text-indigo-300 mb-2">{activeExam.title}</h2>
-                    <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center"><IconUser size={14}/></div><p className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-widest">{studentName} <span className="opacity-50 mx-1">|</span> {studentNumber}</p></div>
+                    <h2 className="text-xl sm:text-3xl font-black uppercase tracking-tight leading-tight text-indigo-300 mb-2">{activeExam.title}</h2>
+                    <div className="flex items-center gap-3"><div className="w-6 h-6 sm:w-8 sm:h-8 bg-white/10 rounded-full flex items-center justify-center"><IconUser size={12}/></div><p className="text-slate-300 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">{studentName} <span className="opacity-50 mx-1">|</span> {studentNumber}</p></div>
                 </div>
-                <div className={"w-full sm:w-auto flex justify-center sm:justify-start px-4 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-mono text-xl sm:text-2xl bg-black/40 items-center gap-2 sm:gap-3 border border-white/10 transition-colors shadow-inner " + (timeLeft < 60 ? 'text-red-400 bg-red-900/20 border-red-500/50 animate-pulse' : 'text-white')}><IconClock size={24} className="opacity-50" /> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
+                {/* YENİ: Süre boyutu daha küçük ve zarif hale getirildi */}
+                <div className={"w-full sm:w-auto flex justify-center sm:justify-start px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-2xl font-mono text-xl sm:text-2xl bg-black/40 items-center gap-2 sm:gap-3 border border-white/10 transition-colors shadow-inner " + (timeLeft < 60 ? 'text-red-400 bg-red-900/20 border-red-500/50 animate-pulse' : 'text-white')}><IconClock size={20} className="opacity-50" /> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
              </div>
              <div className="bg-white p-6 sm:p-10 md:p-16 rounded-b-3xl sm:rounded-b-[5rem] shadow-xl sm:shadow-2xl space-y-16 sm:space-y-24 border-x border-b border-slate-200">
                 {(activeExam.questions || []).map((q, qIdx) => (
@@ -753,26 +865,26 @@ const App = () => {
                          <div className="flex-1 w-full mt-2 sm:mt-0">
                             <div className="flex flex-col items-start gap-3 sm:gap-4 mb-6 sm:mb-10">
                                 <span className="text-[8px] sm:text-[10px] font-black bg-slate-100 text-slate-500 px-3 sm:px-4 py-1 sm:py-1.5 rounded-md sm:rounded-full uppercase tracking-widest border border-slate-200 flex items-center gap-1.5"><IconBookOpen size={12}/> {q.topic || 'Genel'}</span>
-                                <p className="text-xl sm:text-3xl md:text-4xl font-black text-stone-800 leading-snug sm:leading-tight uppercase tracking-tight">{q.text}</p>
+                                <p className="text-lg sm:text-2xl md:text-3xl font-black text-stone-800 leading-snug sm:leading-tight uppercase tracking-tight">{q.text}</p>
                             </div>
                             
                             {q.imageUrl && <div className="mb-8 sm:mb-12 rounded-2xl sm:rounded-[3rem] overflow-hidden border-4 sm:border-8 border-slate-50 shadow-inner bg-slate-100 flex items-center justify-center p-4"><img src={q.imageUrl} className="max-h-[300px] sm:max-h-[500px] w-full object-contain rounded-xl" alt="Soru Görseli" /></div>}
                             
-                            {q.type === 'multiple-choice' && <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">{q.options.map((opt, oIdx) => (<button type="button" key={oIdx} onClick={() => setAnswers({...answers, [qIdx]: oIdx})} className={"p-5 sm:p-8 text-left rounded-2xl sm:rounded-[3rem] border-2 sm:border-4 font-black transition-all flex justify-between items-center group relative overflow-hidden " + (answers[qIdx] === oIdx ? 'border-indigo-600 bg-indigo-600 text-white shadow-2xl scale-[1.02] transform' : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/30 text-slate-500 hover:text-slate-800')}><span className="text-base sm:text-xl flex items-center gap-3 sm:gap-4 z-10"><span className={"w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg sm:rounded-xl font-black text-lg sm:text-2xl transition-colors " + (answers[qIdx] === oIdx ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600')}>{String.fromCharCode(65 + oIdx)}</span> <span className="leading-tight">{opt}</span></span>{answers[qIdx] === oIdx && <IconCheckCircle className="text-white z-10 shrink-0" size={24} />}{answers[qIdx] === oIdx && <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white/10 to-transparent"></div>}</button>))}</div>}
+                            {q.type === 'multiple-choice' && <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">{q.options.map((opt, oIdx) => (<button type="button" key={oIdx} onClick={() => setAnswers({...answers, [qIdx]: oIdx})} className={"p-4 sm:p-6 text-left rounded-xl sm:rounded-[2rem] border-2 sm:border-4 font-black transition-all flex justify-between items-center group relative overflow-hidden " + (answers[qIdx] === oIdx ? 'border-indigo-600 bg-indigo-600 text-white shadow-xl scale-[1.02] transform' : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/30 text-slate-500 hover:text-slate-800')}><span className="text-sm sm:text-lg flex items-center gap-3 sm:gap-4 z-10"><span className={"w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg sm:rounded-xl font-black text-base sm:text-xl transition-colors " + (answers[qIdx] === oIdx ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600')}>{String.fromCharCode(65 + oIdx)}</span> <span className="leading-tight">{opt}</span></span>{answers[qIdx] === oIdx && <IconCheckCircle className="text-white z-10 shrink-0" size={24} />}{answers[qIdx] === oIdx && <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white/10 to-transparent"></div>}</button>))}</div>}
                             
-                            {q.type === 'true-false' && <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">{['DOĞRU','YANLIŞ'].map((opt, oIdx) => (<button type="button" key={oIdx} onClick={() => setAnswers({...answers, [qIdx]: oIdx})} className={"flex-1 p-6 sm:p-10 rounded-2xl sm:rounded-[3rem] border-2 sm:border-4 font-black text-xl sm:text-3xl transition-all flex items-center justify-center gap-4 " + (answers[qIdx] === oIdx ? (oIdx===0 ? 'border-green-500 bg-green-500 text-white shadow-xl scale-[1.02]' : 'border-red-500 bg-red-500 text-white shadow-xl scale-[1.02]') : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700')}>{opt}</button>))}</div>}
+                            {q.type === 'true-false' && <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">{['DOĞRU','YANLIŞ'].map((opt, oIdx) => (<button type="button" key={oIdx} onClick={() => setAnswers({...answers, [qIdx]: oIdx})} className={"flex-1 p-6 sm:p-8 rounded-xl sm:rounded-[2rem] border-2 sm:border-4 font-black text-lg sm:text-2xl transition-all flex items-center justify-center gap-3 sm:gap-4 " + (answers[qIdx] === oIdx ? (oIdx===0 ? 'border-green-500 bg-green-500 text-white shadow-lg scale-[1.02]' : 'border-red-500 bg-red-500 text-white shadow-lg scale-[1.02]') : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700')}>{opt === 'DOĞRU' ? <IconCheckCircle size={24} className={answers[qIdx] === oIdx ? "text-white" : "opacity-30"}/> : <IconXCircle size={24} className={answers[qIdx] === oIdx ? "text-white" : "opacity-30"}/>}{opt}</button>))}</div>}
                             
-                            {q.type === 'short-answer' && <div className="relative"><input type="text" placeholder="Cevabınızı buraya yazın..." className="w-full p-6 sm:p-10 bg-slate-50 rounded-2xl sm:rounded-[3rem] border-2 sm:border-4 border-slate-200 outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 font-black text-xl sm:text-3xl md:text-4xl text-center uppercase transition-all tracking-widest shadow-inner placeholder:text-slate-300 placeholder:text-lg sm:placeholder:text-2xl" value={answers[qIdx] || ''} onChange={e => setAnswers({...answers, [qIdx]: e.target.value})} /></div>}
+                            {q.type === 'short-answer' && <div className="relative"><input type="text" placeholder="Cevabınızı buraya yazın..." className="w-full p-6 sm:p-8 bg-slate-50 rounded-xl sm:rounded-[2.5rem] border-2 sm:border-4 border-slate-200 outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 font-black text-lg sm:text-2xl md:text-3xl text-center uppercase transition-all tracking-widest shadow-inner placeholder:text-slate-300 placeholder:text-sm sm:placeholder:text-xl" value={answers[qIdx] || ''} onChange={e => setAnswers({...answers, [qIdx]: e.target.value})} /></div>}
                             
-                            {q.type === 'matching' && <div className="space-y-4 sm:space-y-6 mt-6 sm:mt-8">{q.pairs.map((pair, pIdx) => (<div key={pIdx} className="flex flex-col sm:flex-row gap-3 sm:gap-6 items-stretch sm:items-center bg-white p-4 sm:p-6 rounded-xl sm:rounded-[2rem] border-2 border-slate-200 hover:border-indigo-300 transition-colors shadow-sm"><div className="flex-1 bg-slate-50 py-3 sm:py-4 px-5 sm:px-6 rounded-lg sm:rounded-2xl border border-slate-100 flex items-center justify-between sm:justify-start gap-4"><span className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center font-black text-xs sm:text-sm text-slate-400 shadow-sm border border-slate-100 shrink-0">{pIdx+1}</span><span className="font-black text-base sm:text-xl text-stone-800 text-right sm:text-left flex-1 break-words">{pair.left}</span></div><div className="hidden sm:flex items-center justify-center w-8 text-slate-300"><IconChevronRight size={24}/></div><div className="flex-1 relative"><select className={"w-full py-4 sm:py-5 px-4 sm:px-6 rounded-lg sm:rounded-2xl border-2 outline-none font-bold sm:font-black text-sm sm:text-lg appearance-none transition-all shadow-sm cursor-pointer " + (answers[qIdx]?.[pair.left] ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 focus:border-indigo-400')} value={answers[qIdx]?.[pair.left] || ''} onChange={(e) => { const currentAns = answers[qIdx] || {}; setAnswers({...answers, [qIdx]: {...currentAns, [pair.left]: e.target.value}}); }}><option value="" disabled className="text-slate-300">Seçim Yapın...</option>{[...q.pairs].map(p => p.right).sort().map((ro, roIdx) => (<option key={roIdx} value={ro} className="font-bold text-slate-700 py-2">{ro}</option>))}</select><div className="absolute right-4 sm:right-6 top-1/2 transform -translate-y-1/2 pointer-events-none text-slate-400"><IconChevronLeft size={20} className="rotate-270 transform"/></div></div></div>))}</div>}
+                            {q.type === 'matching' && <div className="space-y-4 sm:space-y-6 mt-6 sm:mt-8">{q.pairs.map((pair, pIdx) => (<div key={pIdx} className="flex flex-col sm:flex-row gap-3 sm:gap-6 items-stretch sm:items-center bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-indigo-300 transition-colors shadow-sm"><div className="flex-1 bg-slate-50 py-3 sm:py-4 px-4 sm:px-5 rounded-lg sm:rounded-xl border border-slate-100 flex items-center justify-between sm:justify-start gap-3 sm:gap-4"><span className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center font-black text-xs sm:text-sm text-slate-400 shadow-sm border border-slate-100 shrink-0">{pIdx+1}</span><span className="font-black text-sm sm:text-lg text-stone-800 text-right sm:text-left flex-1 break-words">{pair.left}</span></div><div className="hidden sm:flex items-center justify-center w-8 text-slate-300"><IconChevronRight size={20}/></div><div className="flex-1 relative"><select className={"w-full py-3 sm:py-4 px-4 sm:px-5 rounded-lg sm:rounded-xl border-2 outline-none font-bold sm:font-black text-xs sm:text-base appearance-none transition-all shadow-sm cursor-pointer " + (answers[qIdx]?.[pair.left] ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 focus:border-indigo-400')} value={answers[qIdx]?.[pair.left] || ''} onChange={(e) => { const currentAns = answers[qIdx] || {}; setAnswers({...answers, [qIdx]: {...currentAns, [pair.left]: e.target.value}}); }}><option value="" disabled className="text-slate-300">Seçim Yapın...</option>{[...q.pairs].map(p => p.right).sort().map((ro, roIdx) => (<option key={roIdx} value={ro} className="font-bold text-slate-700 py-2">{ro}</option>))}</select><div className="absolute right-4 sm:right-5 top-1/2 transform -translate-y-1/2 pointer-events-none text-slate-400"><IconChevronLeft size={16} className="rotate-270 transform"/></div></div></div>))}</div>}
                          </div>
                       </div>
                    </div>
                 ))}
                 
-                <div className="flex flex-col items-center gap-4 sm:gap-6 pt-10 sm:pt-20 border-t-2 border-dashed border-slate-200">
-                    <button type="button" onClick={handleFinishExam} className="w-full sm:w-auto bg-indigo-600 text-white px-8 sm:px-24 py-5 sm:py-8 rounded-2xl sm:rounded-[4rem] font-black text-xl sm:text-3xl shadow-xl sm:shadow-2xl hover:bg-indigo-700 hover:shadow-indigo-500/30 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-4 sm:gap-6 uppercase tracking-tighter border-b-4 sm:border-b-8 border-indigo-800"><IconSend size={32} /> <span className="mt-1">Sınavı Bitir</span></button>
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[8px] sm:text-[10px] flex items-center gap-2"><IconLock size={12}/> Yanıtlarınız bulut sistemine şifrelenerek kaydedilecektir.</p>
+                <div className="flex flex-col items-center gap-4 sm:gap-6 pt-10 sm:pt-16 border-t-2 border-dashed border-slate-200">
+                    <button type="button" onClick={handleFinishExam} className="w-full sm:w-auto bg-indigo-600 text-white px-8 sm:px-20 py-4 sm:py-6 rounded-2xl sm:rounded-[3rem] font-black text-lg sm:text-2xl shadow-xl sm:shadow-2xl hover:bg-indigo-700 hover:shadow-indigo-500/30 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 uppercase tracking-tighter border-b-4 sm:border-b-8 border-indigo-800"><IconSend size={24} className="sm:w-8 sm:h-8" /> <span className="mt-0.5">Sınavı Bitir</span></button>
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[8px] sm:text-[9px] flex items-center gap-1.5"><IconLock size={10}/> Yanıtlarınız bulut sistemine şifrelenerek kaydedilecektir.</p>
                 </div>
              </div>
           </div>
