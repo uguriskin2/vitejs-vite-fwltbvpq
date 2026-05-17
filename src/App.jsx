@@ -8,26 +8,25 @@ import {
   getAuth, signInAnonymously, onAuthStateChanged 
 } from 'firebase/auth';
 
-// --- İkonlar ---
-const IconTarget = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
-const IconLock = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
-const IconLogOut = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
-const IconUser = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
-const IconPlusCircle = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>;
-const IconLink = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
-const IconTrash2 = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
-const IconChevronLeft = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>;
-const IconChevronRight = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>;
-const IconDownload = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
-const IconPrinter = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>;
-const IconSmartphone = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>;
-const IconBookOpen = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" className={className} width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
-const IconClock = () => <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
-const IconCheckCircle = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
-const IconSend = () => <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>;
-const IconActivity = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
-const IconActivitySmall = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
-const IconFileText = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
+// --- İkonlar (Dış kütüphane hatalarını önlemek için kodun içine gömüldü) ---
+const IconTarget = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
+const IconLock = ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+const IconLogOut = ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+const IconUser = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+const IconPlusCircle = ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>;
+const IconLink = ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
+const IconTrash2 = ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+const IconChevronLeft = ({size=32, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>;
+const IconChevronRight = ({size=32, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>;
+const IconDownload = ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+const IconPrinter = ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>;
+const IconSmartphone = ({size=14, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>;
+const IconBookOpen = ({size=40, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
+const IconClock = ({size=40, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+const IconCheckCircle = ({size=32, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+const IconSend = ({size=40, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>;
+const IconActivity = ({size=64, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+const IconFileText = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
 
 // --- Firebase Yapılandırması ---
 const firebaseConfig = {
@@ -85,10 +84,18 @@ const App = () => {
   // ÖĞRENCİ BİLGİLERİ
   const [studentName, setStudentName] = useState('');
   const [studentNumber, setStudentNumber] = useState('');
-  const [studentExamCode, setStudentExamCode] = useState(''); // YENİ: Öğrencinin girdiği kod
+  const [studentExamCode, setStudentExamCode] = useState(''); // Öğrencinin girdiği kod
   
   const [answers, setAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(0);
+
+  // --- Yükleme Ekranı Güvenlik Kilidi (Sonsuz yüklemeyi önler) ---
+  useEffect(() => {
+    const forceUnlock = setTimeout(() => {
+      setLoading(false);
+    }, 2500);
+    return () => clearTimeout(forceUnlock);
+  }, []);
 
   useEffect(() => {
     try {
@@ -104,7 +111,7 @@ const App = () => {
     } catch (e) {}
   }, []);
 
-  // --- API BAĞLANTISI ---
+  // --- API BAĞLANTISI (Güvenlik Korumalı) ---
   async function callGemini(prompt, systemInstruction = "", pdfBase64 = null) {
     const currentKey = geminiKey ? geminiKey.trim() : "";
 
@@ -221,11 +228,7 @@ const App = () => {
       });
     }
 
-    const fallbackTimer = setTimeout(() => {
-      if (loading && isMounted) setLoading(false);
-    }, 4000);
-
-    return () => { isMounted = false; unsubExams(); unsubSubs(); clearTimeout(fallbackTimer); };
+    return () => { isMounted = false; unsubExams(); unsubSubs(); };
   }, [user]);
 
   useEffect(() => {
@@ -249,7 +252,7 @@ const App = () => {
     } else showModal("Hata", "Yanlış şifre!", "error");
   };
 
-  // YENİ: Link kopyalama fonksiyonu sadece site linkini ve kodu verecek şekilde güncellendi
+  // Öğretmen için sadece site linki ve kodu veren fonksiyon
   const handleCopyLink = (e, exam) => {
     e.stopPropagation();
     const link = window.location.origin + window.location.pathname + "?view=student";
@@ -363,7 +366,6 @@ const App = () => {
   };
 
   const handleSaveExam = async () => {
-    // YENİ: Sınav Kodu boş olamaz
     if (!newExam.title || !newExam.questions.length || !newExam.examCode) {
         showModal("Eksik Bilgi", "Lütfen Sınav Başlığı, Sınav Kodu ve en az bir soru eklediğinizden emin olun.", "error");
         return;
@@ -380,14 +382,13 @@ const App = () => {
     }
   };
 
-  // YENİ: Öğrencinin KOD ile sınava giriş yapmasını sağlayan fonksiyon
+  // Öğrencinin KOD ile sınava giriş yapmasını sağlayan fonksiyon
   const handleStudentStart = () => {
     if(!studentName || !studentNumber || !studentExamCode) {
         showModal("Eksik Bilgi", "Lütfen adınızı, numaranızı ve öğretmenin verdiği Sınav Kodunu eksiksiz girin.", "error");
         return;
     }
     
-    // Girilen koda sahip sınavı bul
     const foundExam = exams.find(e => e.examCode && e.examCode.toUpperCase() === studentExamCode.toUpperCase());
     
     if (!foundExam) {
@@ -395,7 +396,6 @@ const App = () => {
         return;
     }
     
-    // Doğruysa sınavı başlat
     setActiveExam(foundExam); 
     setAnswers({}); 
     setTimeLeft(foundExam.duration * 60); 
@@ -460,7 +460,7 @@ const App = () => {
     return Object.keys(stats).map(name => ({ name, percentage: ((stats[name].correct / stats[name].total) * 100).toFixed(1) }));
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-indigo-600 animate-pulse bg-white text-2xl uppercase tracking-tighter">Sistem Yükleniyor...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-indigo-600 animate-pulse bg-white text-xl sm:text-2xl uppercase tracking-tighter">Sistem Yükleniyor...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col">
@@ -468,85 +468,85 @@ const App = () => {
       
       {modal.visible && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 print:hidden">
-          <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl animate-in zoom-in duration-200 border-t-8 border-indigo-600">
-            <h3 className={`text-2xl font-black mb-3 uppercase ${modal.type === 'error' ? 'text-red-600' : modal.type === 'success' ? 'text-green-600' : 'text-indigo-600'}`}>{modal.title}</h3>
-            <p className="text-slate-600 font-medium mb-8 leading-relaxed max-h-64 overflow-y-auto custom-scrollbar whitespace-pre-wrap">{modal.message}</p>
-            <div className="flex gap-3">
+          <div className="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full shadow-2xl animate-in zoom-in duration-200 border-t-8 border-indigo-600">
+            <h3 className={`text-xl sm:text-2xl font-black mb-3 uppercase ${modal.type === 'error' ? 'text-red-600' : modal.type === 'success' ? 'text-green-600' : 'text-indigo-600'}`}>{modal.title}</h3>
+            <p className="text-sm sm:text-base text-slate-600 font-medium mb-8 leading-relaxed max-h-64 overflow-y-auto custom-scrollbar whitespace-pre-wrap">{modal.message}</p>
+            <div className="flex flex-col sm:flex-row gap-3">
               {modal.type === 'confirm' ? (
-                <><button type="button" onClick={closeModal} className="flex-1 py-4 font-bold text-slate-400">İptal</button><button type="button" onClick={() => { modal.onConfirm(); closeModal(); }} className="flex-1 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg">Onayla</button></>
-              ) : <button type="button" onClick={closeModal} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg">Tamam</button>}
+                <><button type="button" onClick={closeModal} className="flex-1 py-3 sm:py-4 font-bold text-slate-400">İptal</button><button type="button" onClick={() => { modal.onConfirm(); closeModal(); }} className="flex-1 py-3 sm:py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg">Onayla</button></>
+              ) : <button type="button" onClick={closeModal} className="w-full py-3 sm:py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg">Tamam</button>}
             </div>
           </div>
         </div>
       )}
 
-      {aiProcessing && <div className="fixed inset-0 bg-indigo-900/40 backdrop-blur-sm z-[200] flex flex-col items-center justify-center text-white print:hidden"><IconActivity className="animate-spin mb-4" /><p className="font-black uppercase tracking-widest text-center">PDF/METİN OKUNUYOR<br/>SORULAR ÜRETİLİYOR...</p></div>}
+      {aiProcessing && <div className="fixed inset-0 bg-indigo-900/40 backdrop-blur-sm z-[200] flex flex-col items-center justify-center text-white print:hidden"><IconActivity size={64} className="animate-spin mb-4" /><p className="font-black uppercase tracking-widest text-center text-sm sm:text-base">PDF/METİN OKUNUYOR<br/>SORULAR ÜRETİLİYOR...</p></div>}
 
       <nav className="bg-white border-b border-slate-200 p-4 sticky top-0 z-50 flex justify-between items-center shadow-sm print:hidden">
-        <div className="flex items-center gap-2 font-black text-2xl text-indigo-600 cursor-pointer" onClick={() => setView('landing')}>
-          <div className="bg-indigo-600 p-1.5 rounded-lg text-white shadow-lg"><IconTarget/></div>
+        <div className="flex items-center gap-2 font-black text-xl sm:text-2xl text-indigo-600 cursor-pointer" onClick={() => setView('landing')}>
+          <div className="bg-indigo-600 p-1.5 rounded-lg text-white shadow-lg"><IconTarget size={24}/></div>
           <div className="flex flex-col">
             <span>SINAV<span className="text-slate-800">AI</span></span>
             <span className="text-[9px] text-slate-400 font-bold tracking-widest lowercase -mt-1 hidden sm:block">uguriskin@gmail.com</span>
           </div>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-2 sm:gap-4">
           {!isTeacher ? (
-            <button type="button" onClick={() => setShowPassModal(true)} className="flex items-center gap-2 font-bold text-slate-500 hover:text-indigo-600 transition-colors"><IconLock/> Panel</button>
+            <button type="button" onClick={() => setShowPassModal(true)} className="flex items-center gap-1 sm:gap-2 font-bold text-slate-500 hover:text-indigo-600 transition-colors text-xs sm:text-base"><IconLock size={16}/> <span className="hidden sm:inline">Panel</span></button>
           ) : (
-            <><button type="button" onClick={() => setView('teacher')} className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl font-bold">Yönetim</button><button type="button" onClick={() => { setIsTeacher(false); setView('landing'); }} className="flex items-center gap-2 font-bold text-red-500 px-2 transition-colors hover:text-red-700"><IconLogOut/> Çıkış</button></>
+            <><button type="button" onClick={() => setView('teacher')} className="bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-base">Yönetim</button><button type="button" onClick={() => { setIsTeacher(false); setView('landing'); }} className="flex items-center gap-1 sm:gap-2 font-bold text-red-500 px-2 transition-colors hover:text-red-700 text-xs sm:text-base"><IconLogOut size={16}/> <span className="hidden sm:inline">Çıkış</span></button></>
           )}
-          <button type="button" onClick={() => setView('student')} className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-black shadow-xl hover:bg-indigo-700 transition-all">SINAVA GİR</button>
+          <button type="button" onClick={() => setView('student')} className="bg-indigo-600 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl font-black shadow-xl hover:bg-indigo-700 transition-all text-xs sm:text-base">SINAVA GİR</button>
         </div>
       </nav>
 
       {showPassModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 print:hidden">
-          <div className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-2xl text-center border-t-8 border-indigo-600">
-            <h3 className="text-2xl font-black mb-6 uppercase">Yönetici Girişi</h3>
-            <input type="password" autoFocus className="w-full p-5 bg-slate-50 border-none rounded-3xl outline-none ring-4 ring-transparent focus:ring-indigo-500 text-center mb-6 font-black text-2xl tracking-widest" placeholder="••••" onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleTeacherLogin()} />
-            <div className="flex gap-3"><button type="button" onClick={() => setShowPassModal(false)} className="flex-1 py-4 font-bold text-slate-400">İptal</button><button type="button" onClick={handleTeacherLogin} className="flex-1 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg">GİRİŞ YAP</button></div>
+          <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 max-w-sm w-full shadow-2xl text-center border-t-8 border-indigo-600">
+            <h3 className="text-xl sm:text-2xl font-black mb-6 uppercase">Yönetici Girişi</h3>
+            <input type="password" autoFocus className="w-full p-4 sm:p-5 bg-slate-50 border-none rounded-2xl sm:rounded-3xl outline-none ring-4 ring-transparent focus:ring-indigo-500 text-center mb-6 font-black text-xl sm:text-2xl tracking-widest" placeholder="••••" onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleTeacherLogin()} />
+            <div className="flex gap-3"><button type="button" onClick={() => setShowPassModal(false)} className="flex-1 py-3 sm:py-4 font-bold text-slate-400 text-sm sm:text-base">İptal</button><button type="button" onClick={handleTeacherLogin} className="flex-1 py-3 sm:py-4 bg-indigo-600 text-white font-black rounded-xl sm:rounded-2xl shadow-lg text-sm sm:text-base">GİRİŞ YAP</button></div>
           </div>
         </div>
       )}
 
       <main className="max-w-6xl w-full mx-auto p-4 md:p-8 flex-1">
         {view === 'landing' && (
-          <div className="text-center py-20 animate-in fade-in zoom-in print:hidden">
-            <h2 className="text-7xl font-black mb-8 leading-[0.9] tracking-tighter uppercase text-slate-900">Bulut Tabanlı <br/><span className="text-indigo-600 underline decoration-indigo-200 decoration-8 underline-offset-8">Akıllı Sınav</span></h2>
-            <p className="text-xl text-slate-400 mb-14 max-w-2xl mx-auto font-bold leading-relaxed">Öğrencileriniz için hesap gerekmez. Sınavları AI ile hazırlayın, özel sınav koduyla güvenle paylaşın.</p>
-            <button type="button" onClick={() => setView('student')} className="bg-indigo-600 text-white px-12 py-6 rounded-[3rem] font-black text-2xl hover:scale-110 active:scale-95 transition-all shadow-2xl flex items-center gap-4 mx-auto shadow-indigo-200"><IconUser/> SINAVA BAŞLA</button>
+          <div className="text-center py-10 sm:py-20 animate-in fade-in zoom-in print:hidden px-4">
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] sm:leading-[0.9] tracking-tighter uppercase text-slate-900">Bulut Tabanlı <br/><span className="text-indigo-600 underline decoration-indigo-200 decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8 mt-2 inline-block">Akıllı Sınav</span></h2>
+            <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-4">Öğrencileriniz için hesap gerekmez. Sınavları AI ile hazırlayın, özel sınav koduyla güvenle paylaşın.</p>
+            <button type="button" onClick={() => setView('student')} className="bg-indigo-600 text-white px-8 sm:px-12 py-4 sm:py-6 rounded-full sm:rounded-[3rem] font-black text-lg sm:text-2xl hover:scale-105 active:scale-95 transition-all shadow-xl sm:shadow-2xl flex items-center justify-center gap-3 sm:gap-4 mx-auto w-full sm:w-auto max-w-sm shadow-indigo-200"><IconUser size={28}/> SINAVA BAŞLA</button>
           </div>
         )}
 
         {view === 'teacher' && isTeacher && (
-          <div className="space-y-10 animate-in slide-in-from-bottom-8 print:hidden">
-            <div className="flex justify-between items-end">
-              <div><h2 className="text-4xl font-black text-slate-900 uppercase">Sınav Merkezi</h2><p className="text-indigo-600 font-bold uppercase text-[10px] animate-pulse">PANEL AKTİF</p></div>
-              <button type="button" onClick={() => setView('create')} className="bg-green-600 text-white px-8 py-4 rounded-[2rem] font-black flex items-center gap-2 shadow-2xl hover:scale-105 transition-all"><IconPlusCircle/> YENİ SINAV</button>
+          <div className="space-y-6 sm:space-y-10 animate-in slide-in-from-bottom-8 print:hidden">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 sm:gap-0">
+              <div><h2 className="text-2xl sm:text-4xl font-black text-slate-900 uppercase">Sınav Merkezi</h2><p className="text-indigo-600 font-bold uppercase text-[8px] sm:text-[10px] animate-pulse mt-1">PANEL AKTİF</p></div>
+              <button type="button" onClick={() => setView('create')} className="w-full sm:w-auto bg-green-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-[2rem] font-black flex items-center justify-center gap-2 shadow-lg sm:shadow-2xl hover:bg-green-700 transition-all text-sm sm:text-base"><IconPlusCircle size={20}/> YENİ SINAV</button>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
               {exams.length === 0 ? (
-                <div className="col-span-full border-4 border-dashed rounded-[3rem] py-32 text-center text-slate-200 font-black text-3xl uppercase bg-white/50 border-slate-100">Henüz Sınav Yok</div>
+                <div className="col-span-full border-2 sm:border-4 border-dashed rounded-2xl sm:rounded-[3rem] py-20 sm:py-32 text-center text-slate-300 sm:text-slate-200 font-black text-xl sm:text-3xl uppercase bg-white/50 border-slate-200 sm:border-slate-100">Henüz Sınav Yok</div>
               ) : exams.map(exam => {
                 const examSubs = submissions.filter(s => s.examId === exam.id);
                 const avg = examSubs.length > 0 ? (examSubs.reduce((a, b) => a + (Number(b?.score) || 0), 0) / examSubs.length).toFixed(1) : 0;
                 return (
-                  <div key={exam.id} className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 group relative hover:shadow-xl transition-all">
-                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-all flex gap-2">
-                       <button type="button" onClick={(e) => handleCopyLink(e, exam)} className="bg-white shadow-md p-2 rounded-xl text-indigo-500" title="Kodu ve Linki Kopyala"><IconLink/></button>
-                       <button type="button" onClick={(e) => { e.stopPropagation(); showModal("Sil", "Bu sınav kalıcı olarak silinecek. Emin misiniz?", "confirm", () => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id))); }} className="bg-white shadow-md p-2 rounded-xl text-red-500" title="Sil"><IconTrash2/></button>
+                  <div key={exam.id} className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-[3rem] shadow-sm border border-slate-100 group relative hover:shadow-lg transition-all">
+                    <div className="absolute top-0 right-0 p-3 sm:p-4 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all flex gap-1 sm:gap-2">
+                       <button type="button" onClick={(e) => handleCopyLink(e, exam)} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-indigo-500 hover:bg-indigo-50" title="Kodu ve Linki Kopyala"><IconLink size={18}/></button>
+                       <button type="button" onClick={(e) => { e.stopPropagation(); showModal("Sil", "Bu sınav kalıcı olarak silinecek. Emin misiniz?", "confirm", () => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id))); }} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-red-500 hover:bg-red-50" title="Sil"><IconTrash2 size={18}/></button>
                     </div>
-                    <button type="button" onClick={() => { setActiveExam(exam); setView('analytics'); }} className="text-left w-full h-full pr-10">
-                      <h3 className="font-black text-2xl mb-2 line-clamp-1 uppercase text-indigo-900 tracking-tight">{exam.title}</h3>
+                    <button type="button" onClick={() => { setActiveExam(exam); setView('analytics'); }} className="text-left w-full h-full pt-8 lg:pt-0 pr-0 lg:pr-10">
+                      <h3 className="font-black text-lg sm:text-2xl mb-2 line-clamp-2 sm:line-clamp-1 uppercase text-indigo-900 tracking-tight">{exam.title}</h3>
                       {/* Sınav kodu öğretmen panelinde net olarak gösteriliyor */}
-                      <p className="text-sm font-bold text-indigo-500 mb-6 bg-indigo-50 inline-block px-3 py-1 rounded-lg border border-indigo-100">KOD: {exam.examCode}</p>
+                      <p className="text-xs sm:text-sm font-bold text-indigo-500 mb-4 sm:mb-6 bg-indigo-50 inline-block px-2 sm:px-3 py-1 rounded-md sm:rounded-lg border border-indigo-100">KOD: {exam.examCode}</p>
                       
-                      <div className="grid grid-cols-2 gap-2 text-center mb-8">
-                        <div className="bg-slate-50 p-2 rounded-2xl border"><p className="text-[8px] font-black text-slate-400 uppercase">Soru</p><p className="font-black">{exam.questions?.length || 0}</p></div>
-                        <div className="bg-green-50 p-2 rounded-2xl border border-green-100"><p className="text-[8px] font-black text-green-600 uppercase">Ort.</p><p className="font-black text-green-700">%{avg}</p></div>
+                      <div className="grid grid-cols-2 gap-2 text-center mb-6 sm:mb-8">
+                        <div className="bg-slate-50 p-2 rounded-xl sm:rounded-2xl border border-slate-100"><p className="text-[7px] sm:text-[8px] font-black text-slate-400 uppercase">Soru</p><p className="font-black text-sm sm:text-base text-slate-700">{exam.questions?.length || 0}</p></div>
+                        <div className="bg-green-50 p-2 rounded-xl sm:rounded-2xl border border-green-100"><p className="text-[7px] sm:text-[8px] font-black text-green-600 uppercase">Ort.</p><p className="font-black text-sm sm:text-base text-green-700">%{avg}</p></div>
                       </div>
-                      <div className="w-full py-4 bg-slate-900 text-white rounded-2xl text-center font-black text-xs uppercase tracking-widest hover:bg-indigo-600 transition-colors">Analiz Et</div>
+                      <div className="w-full py-3 sm:py-4 bg-slate-900 text-white rounded-xl sm:rounded-2xl text-center font-black text-[10px] sm:text-xs uppercase tracking-widest hover:bg-indigo-600 transition-colors">Analizi Gör</div>
                     </button>
                   </div>
                 );
@@ -556,93 +556,109 @@ const App = () => {
         )}
 
         {view === 'create' && isTeacher && (
-          <div className="grid md:grid-cols-12 gap-8 animate-in slide-in-from-bottom-8 print:hidden">
+          <div className="grid md:grid-cols-12 gap-6 sm:gap-8 animate-in slide-in-from-bottom-8 print:hidden">
             <div className="md:col-span-8 space-y-6">
-               <div className="bg-white p-12 rounded-[3.5rem] shadow-sm border border-slate-100">
-                  <div className="flex items-center gap-4 mb-10"><button type="button" onClick={() => setView('teacher')} className="p-3 bg-stone-50 rounded-2xl text-slate-400 hover:bg-indigo-50 hover:text-indigo-600"><IconChevronLeft/></button><h2 className="text-4xl font-black uppercase text-stone-900">Sınav Tasarla</h2></div>
+               <div className="bg-white p-6 sm:p-12 rounded-2xl sm:rounded-[3.5rem] shadow-sm border border-slate-100">
+                  <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-10"><button type="button" onClick={() => setView('teacher')} className="p-2 sm:p-3 bg-stone-50 rounded-xl sm:rounded-2xl text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><IconChevronLeft size={24}/></button><h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-stone-900">Sınav Tasarla</h2></div>
                   
-                  {/* YENİ: Sınav Kodu belirleme alanı eklendi */}
-                  <div className="grid md:grid-cols-3 gap-6 mb-12">
-                     <input className="w-full p-6 bg-slate-50 rounded-[2rem] font-black text-xl outline-none shadow-inner border focus:border-indigo-500" placeholder="SINAV BAŞLIĞI" value={newExam.title} onChange={e => setNewExam({...newExam, title: e.target.value.toUpperCase()})} />
-                     <input className="w-full p-6 bg-slate-50 rounded-[2rem] font-black text-xl outline-none shadow-inner border focus:border-indigo-500" type="number" placeholder="SÜRE (DK)" value={newExam.duration} onChange={e => setNewExam({...newExam, duration: parseInt(e.target.value) || 0})} />
-                     <input className="w-full p-6 bg-indigo-50 rounded-[2rem] font-black text-xl outline-none shadow-inner border-2 border-indigo-200 focus:border-indigo-500 text-indigo-700 placeholder-indigo-300 uppercase tracking-widest" placeholder="GİRİŞ KODU (Örn: MAT101)" value={newExam.examCode} onChange={e => setNewExam({...newExam, examCode: e.target.value.toUpperCase()})} />
+                  {/* Sınav Kodu belirleme alanı */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
+                     <input className="w-full sm:col-span-1 p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border focus:border-indigo-500 transition-colors placeholder:text-slate-300" placeholder="BAŞLIK (Örn: Matematik)" value={newExam.title} onChange={e => setNewExam({...newExam, title: e.target.value.toUpperCase()})} />
+                     <input className="w-full sm:col-span-1 p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border focus:border-indigo-500 transition-colors placeholder:text-slate-300" type="number" placeholder="SÜRE (DK)" value={newExam.duration} onChange={e => setNewExam({...newExam, duration: parseInt(e.target.value) || 0})} />
+                     <input className="w-full sm:col-span-1 p-4 sm:p-5 bg-indigo-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border-2 border-indigo-200 focus:border-indigo-500 transition-colors uppercase tracking-widest text-indigo-700 placeholder-indigo-300" placeholder="GİRİŞ KODU (Örn: MAT1)" value={newExam.examCode} onChange={e => setNewExam({...newExam, examCode: e.target.value.toUpperCase()})} />
                   </div>
                   
-                  <div className="bg-indigo-900 rounded-[3rem] p-10 text-white shadow-2xl mb-12">
-                     <div className="flex items-center gap-3 mb-8"><IconActivitySmall className="text-indigo-200" /><div><h3 className="text-xl font-black uppercase tracking-widest leading-none">✨ AI Sihirbazı</h3><p className="text-xs text-indigo-300 font-bold mt-1 uppercase">Belge ve Metinden Soru Üretin</p></div></div>
+                  <div className="bg-indigo-900 rounded-2xl sm:rounded-[3rem] p-5 sm:p-10 text-white shadow-xl sm:shadow-2xl mb-8 sm:mb-12">
+                     <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8"><IconActivitySmall size={32} className="text-indigo-200" /><div><h3 className="text-lg sm:text-xl font-black uppercase tracking-widest leading-none">✨ AI Sihirbazı</h3><p className="text-[10px] sm:text-xs text-indigo-300 font-bold mt-0.5 sm:mt-1 uppercase">Belge ve Metinden Soru Üretin</p></div></div>
                      
-                     <div className="mb-8 p-5 bg-black/20 rounded-2xl border border-white/10">
-                        <label className="text-[10px] font-black uppercase mb-2 block tracking-widest text-indigo-200">Google Gemini API Anahtarı <span className="text-red-400">*</span></label>
+                     <div className="mb-6 sm:mb-8 p-4 sm:p-5 bg-black/20 rounded-xl sm:rounded-2xl border border-white/10">
+                        <label className="text-[9px] sm:text-[10px] font-black uppercase mb-1.5 sm:mb-2 block tracking-widest text-indigo-200">Google Gemini API Anahtarı <span className="text-red-400">*</span></label>
                         <input 
                             type="password" 
                             placeholder="AIzaSy ile başlayan anahtarınızı buraya yapıştırın..." 
                             value={geminiKey} 
                             onChange={e => { setGeminiKey(e.target.value); localStorage.setItem('gemini_api_key', e.target.value); }}
-                            className="w-full bg-white/10 border border-white/20 rounded-xl p-3 outline-none text-sm text-white focus:border-indigo-400 transition-colors placeholder:text-white/30"
+                            className="w-full bg-white/10 border border-white/20 rounded-lg sm:rounded-xl p-2.5 sm:p-3 outline-none text-xs sm:text-sm text-white focus:border-indigo-400 transition-colors placeholder:text-white/30"
                         />
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[10px] text-indigo-400 hover:text-indigo-300 mt-2 inline-block font-bold">Ücretsiz API Anahtarı Al &rarr;</a>
-                        <p className="text-xs text-indigo-300 mt-2 opacity-80">Not: Eğer 'Model bulunamadı' hatası alırsanız, Google Cloud hesabınızda "Generative Language API" aktif edilmemiş demektir.</p>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[9px] sm:text-[10px] text-indigo-400 hover:text-indigo-300 mt-1.5 sm:mt-2 inline-block font-bold">Ücretsiz API Anahtarı Al &rarr;</a>
                      </div>
 
-                     <div className="grid grid-cols-2 gap-4 mb-8">
-                        <div><label className="text-[10px] font-black uppercase mb-2 block opacity-50 tracking-widest">Soru Sayısı</label><div className="flex gap-2">{[5,10,20,40].map(n=><button type="button" key={n} onClick={()=>setAiConfig({...aiConfig, count:n})} className={"flex-1 py-3 rounded-xl font-black text-xs transition-all " + (aiConfig.count===n?'bg-white text-indigo-900':'bg-white/10')}>{n}</button>)}</div></div>
-                        <div><label className="text-[10px] font-black uppercase mb-2 block opacity-50 tracking-widest">Tür</label><div className="grid grid-cols-2 gap-1">{['multiple-choice','true-false','short-answer','matching'].map(t=><button type="button" key={t} onClick={()=>toggleAiType(t)} className={"py-2 rounded-lg text-[8px] font-black uppercase transition-all " + (aiConfig.types.includes(t)?'bg-white text-indigo-900':'bg-white/10')}>{t==='matching'?'Eşleş.':t==='true-false'?'D/Y':t==='short-answer'?'Kısa':'ABCD'}</button>)}</div></div>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 sm:mb-8">
+                        <div className="bg-indigo-800/30 p-3 sm:p-4 rounded-xl border border-indigo-700/50"><label className="text-[9px] sm:text-[10px] font-black uppercase mb-2 sm:mb-3 block text-indigo-200 tracking-widest">Soru Sayısı</label><div className="flex gap-1 sm:gap-2">{[5,10,20,40].map(n=><button type="button" key={n} onClick={()=>setAiConfig({...aiConfig, count:n})} className={"flex-1 py-2 sm:py-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs transition-all " + (aiConfig.count===n?'bg-white text-indigo-900 shadow-md scale-105':'bg-white/10 hover:bg-white/20')}>{n}</button>)}</div></div>
+                        <div className="bg-indigo-800/30 p-3 sm:p-4 rounded-xl border border-indigo-700/50"><label className="text-[9px] sm:text-[10px] font-black uppercase mb-2 sm:mb-3 block text-indigo-200 tracking-widest">Tür</label><div className="grid grid-cols-2 gap-1 sm:gap-2">{['multiple-choice','true-false','short-answer','matching'].map(t=><button type="button" key={t} onClick={()=>toggleAiType(t)} className={"py-2 rounded-lg sm:rounded-xl text-[7px] sm:text-[8px] font-black uppercase transition-all " + (aiConfig.types.includes(t)?'bg-white text-indigo-900 shadow-md scale-105':'bg-white/10 hover:bg-white/20')}>{t==='matching'?'Eşleş.':t==='true-false'?'D/Y':t==='short-answer'?'Kısa':'ABCD'}</button>)}</div></div>
                      </div>
 
-                     <div className="mb-6 space-y-4">
-                        <div className="bg-white/5 p-5 rounded-3xl border border-white/10">
-                            <div className="flex items-center justify-between mb-4">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-200">PDF DOSYASINDAN ÜRET (OPSİYONEL)</span>
-                                {pdfFile && <button type="button" onClick={()=>{setPdfFile(null);setPdfName('');setPageRange('');}} className="text-red-400 hover:text-red-300 text-xs font-bold transition-colors"><IconTrash2/></button>}
+                     <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
+                        <div className="bg-white/5 p-4 sm:p-5 rounded-xl sm:rounded-3xl border border-white/10">
+                            <div className="flex items-center justify-between mb-3 sm:mb-4">
+                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-indigo-200">PDF DOSYASINDAN ÜRET (OPSİYONEL)</span>
+                                {pdfFile && <button type="button" onClick={()=>{setPdfFile(null);setPdfName('');setPageRange('');}} className="text-red-400 hover:text-red-300 text-xs font-bold transition-colors"><IconTrash2 size={16}/></button>}
                             </div>
                             
                             {!pdfFile ? (
-                                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-indigo-300/30 rounded-2xl cursor-pointer hover:bg-white/10 transition-all">
-                                    <IconFileText />
-                                    <span className="text-indigo-200 font-bold text-xs uppercase tracking-widest mt-2">PDF SEÇ VEYA SÜRÜKLE</span>
-                                    <span className="text-indigo-300/50 text-[10px] mt-1">Maksimum 5MB Boyutunda</span>
+                                <label className="flex flex-col items-center justify-center w-full h-20 sm:h-24 border-2 border-dashed border-indigo-300/30 rounded-xl sm:rounded-2xl cursor-pointer hover:bg-white/10 transition-all">
+                                    <IconFileText size={20} />
+                                    <span className="text-indigo-200 font-bold text-[10px] sm:text-xs uppercase tracking-widest mt-1 sm:mt-2">PDF SEÇ VEYA SÜRÜKLE</span>
                                     <input type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
                                 </label>
                             ) : (
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-3 text-green-300 font-bold text-sm bg-green-900/40 p-3 rounded-xl border border-green-500/30">
-                                        <IconCheckCircle />
+                                <div className="space-y-2 sm:space-y-3">
+                                    <div className="flex items-center gap-2 sm:gap-3 text-green-300 font-bold text-xs sm:text-sm bg-green-900/40 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-green-500/30">
+                                        <IconCheckCircle size={16} />
                                         <span className="truncate">{pdfName}</span>
                                     </div>
-                                    <input type="text" placeholder="Hangi sayfalar? (Örn: Sadece 12-15 arası)" value={pageRange} onChange={e=>setPageRange(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-xl p-4 outline-none text-sm placeholder:text-white/40 text-white focus:border-indigo-400 transition-colors" />
+                                    <input type="text" placeholder="Hangi sayfalar? (Örn: Sadece 12-15 arası)" value={pageRange} onChange={e=>setPageRange(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-lg sm:rounded-xl p-3 sm:p-4 outline-none text-xs sm:text-sm placeholder:text-white/40 text-white focus:border-indigo-400 transition-colors" />
                                 </div>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-4 opacity-30">
+                        <div className="flex items-center gap-2 sm:gap-4 opacity-30">
                             <div className="h-px bg-white flex-1"></div>
-                            <span className="text-[10px] font-black uppercase tracking-widest">VEYA MANUEL METİN GİRİN</span>
+                            <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest">VEYA MANUEL METİN GİRİN</span>
                             <div className="h-px bg-white flex-1"></div>
                         </div>
 
-                        <textarea className="w-full h-28 bg-white/5 border border-white/10 rounded-3xl p-6 outline-none text-sm shadow-inner placeholder:text-white/30 custom-scrollbar focus:border-indigo-400 transition-colors" placeholder="PDF yüklemek yerine ders notunu buraya da yapıştırabilirsiniz..." value={aiText} onChange={e=>setAiText(e.target.value)} />
+                        <textarea className="w-full h-24 sm:h-28 bg-white/5 border border-white/10 rounded-xl sm:rounded-3xl p-4 sm:p-6 outline-none text-xs sm:text-sm shadow-inner placeholder:text-white/30 custom-scrollbar focus:border-indigo-400 transition-colors" placeholder="PDF yüklemek yerine ders notunu buraya da yapıştırabilirsiniz..." value={aiText} onChange={e=>setAiText(e.target.value)} />
                      </div>
 
-                     <button type="button" onClick={generateWithAI} disabled={aiProcessing || (!aiText.trim() && !pdfFile)} className="w-full py-5 bg-white text-indigo-900 rounded-[2rem] font-black text-lg shadow-xl disabled:opacity-50 hover:bg-indigo-50 active:scale-95 transition-all flex items-center justify-center gap-2"><IconTarget/> SORULARI OLUŞTUR</button>
+                     <button type="button" onClick={generateWithAI} disabled={aiProcessing || (!aiText.trim() && !pdfFile)} className="w-full py-4 sm:py-5 bg-white text-indigo-900 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-lg shadow-xl hover:shadow-2xl disabled:opacity-50 hover:bg-indigo-50 active:scale-95 transition-all flex items-center justify-center gap-2"><IconTarget size={20}/> SORULARI OLUŞTUR</button>
                   </div>
 
-                  <div className="bg-slate-50 p-10 rounded-[3rem] space-y-8 border shadow-inner">
-                    <h3 className="font-black text-xl uppercase text-slate-800 tracking-widest">Manuel Soru Editörü</h3>
-                    <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">{['multiple-choice','true-false','short-answer','matching'].map(t=><button type="button" key={t} onClick={()=>setCurrentQuestion({...currentQuestion,type:t})} className={"px-4 py-2 rounded-xl text-[10px] font-black uppercase border-4 transition-all " + (currentQuestion.type===t?'bg-indigo-600 text-white border-indigo-600 shadow-xl':'bg-white text-slate-300 border-slate-200')}>{t}</button>)}</div>
-                    <textarea className="w-full p-6 bg-white rounded-[2rem] shadow-lg outline-none font-black text-xl border focus:border-indigo-500" placeholder="Soru metni..." value={currentQuestion.text} onChange={e=>setCurrentQuestion({...currentQuestion, text:e.target.value})} />
-                    {currentQuestion.type === 'multiple-choice' && <div className="grid grid-cols-2 gap-4">{currentQuestion.options.map((opt,i)=><div key={i} className="flex items-center gap-2 bg-white p-3 rounded-2xl border"><input type="radio" checked={currentQuestion.correct===i} onChange={()=>setCurrentQuestion({...currentQuestion, correct:i})} /><input className="w-full font-bold outline-none" placeholder={String.fromCharCode(65+i) + " Şıkkı"} value={opt} onChange={e=>{const o=[...currentQuestion.options];o[i]=e.target.value;setCurrentQuestion({...currentQuestion,options:o});}} /></div>)}</div>}
-                    {currentQuestion.type === 'short-answer' && <input className="w-full p-6 rounded-2xl bg-white shadow-lg outline-none text-center font-black text-2xl uppercase tracking-widest border" placeholder="DOĞRU CEVAP" value={currentQuestion.correctText} onChange={e=>setCurrentQuestion({...currentQuestion, correctText: e.target.value})} />}
-                    {currentQuestion.type === 'matching' && <div className="space-y-2">{currentQuestion.pairs.map((p,i)=><div key={i} className="flex gap-2"><input className="flex-1 p-3 rounded-xl bg-white border outline-none font-bold" placeholder="Sol İfade" value={p.left} onChange={e=>{const np=[...currentQuestion.pairs];np[i].left=e.target.value;setCurrentQuestion({...currentQuestion,pairs:np});}} /><input className="flex-1 p-3 rounded-xl bg-white border outline-none font-bold" placeholder="Sağ İfade" value={p.right} onChange={e=>{const np=[...currentQuestion.pairs];np[i].right=e.target.value;setCurrentQuestion({...currentQuestion,pairs:np});}} /></div>)}</div>}
-                    <button type="button" onClick={handleAddQuestion} className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all">Taslağa Ekle</button>
+                  <div className="bg-slate-50 p-6 sm:p-10 rounded-2xl sm:rounded-[3rem] space-y-6 sm:space-y-8 border shadow-inner">
+                    <h3 className="font-black text-lg sm:text-xl uppercase tracking-widest text-slate-800">Manuel Soru Editörü</h3>
+                    <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-4 scrollbar-hide">{['multiple-choice','true-false','short-answer','matching'].map(t=><button type="button" key={t} onClick={()=>setCurrentQuestion({...currentQuestion,type:t})} className={"px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[8px] sm:text-[10px] font-black uppercase border-2 sm:border-4 transition-all whitespace-nowrap shrink-0 " + (currentQuestion.type===t?'bg-indigo-600 text-white border-indigo-600 shadow-md':'bg-white text-slate-400 border-slate-200 hover:border-indigo-300')}>{t==='multiple-choice'?'Çoktan Seçmeli':t==='true-false'?'Doğru / Yanlış':t==='short-answer'?'Kısa Cevap':'Eşleştirme'}</button>)}</div>
+                    <textarea className="w-full p-4 sm:p-6 bg-white rounded-xl sm:rounded-[2rem] shadow-sm outline-none font-bold sm:font-black text-sm sm:text-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-slate-300 min-h-[100px]" placeholder="Soru metni..." value={currentQuestion.text} onChange={e=>setCurrentQuestion({...currentQuestion, text:e.target.value})} />
+                    
+                    {currentQuestion.type === 'multiple-choice' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">{currentQuestion.options.map((opt,i)=><div key={i} className={"flex items-center gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-colors " + (currentQuestion.correct===i ? 'border-indigo-500 bg-indigo-50' : 'border-slate-100')}><input type="radio" checked={currentQuestion.correct===i} onChange={()=>setCurrentQuestion({...currentQuestion, correct:i})} className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" /><input className="w-full font-bold text-sm sm:text-base outline-none bg-transparent placeholder:text-slate-300" placeholder={String.fromCharCode(65+i) + " Şıkkı"} value={opt} onChange={e=>{const o=[...currentQuestion.options];o[i]=e.target.value;setCurrentQuestion({...currentQuestion,options:o});}} /></div>)}</div>}
+                    
+                    {currentQuestion.type === 'short-answer' && <input className="w-full p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white shadow-sm outline-none text-center font-black text-lg sm:text-2xl border border-slate-200 focus:border-indigo-500 placeholder:text-slate-300" placeholder="DOĞRU CEVAP" value={currentQuestion.correctText} onChange={e=>setCurrentQuestion({...currentQuestion, correctText: e.target.value})} />}
+                    
+                    {currentQuestion.type === 'matching' && <div className="space-y-3 sm:space-y-4 bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-100">{currentQuestion.pairs.map((p,i)=><div key={i} className="flex flex-col sm:flex-row gap-2 sm:gap-4"><input className="flex-1 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-slate-50 border border-slate-200 outline-none font-bold text-sm sm:text-base focus:border-indigo-400 focus:bg-white transition-colors" placeholder="Sol İfade" value={p.left} onChange={e=>{const np=[...currentQuestion.pairs];np[i].left=e.target.value;setCurrentQuestion({...currentQuestion,pairs:np});}} /><div className="hidden sm:flex items-center justify-center text-slate-300"><IconChevronRight size={16}/></div><input className="flex-1 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-slate-50 border border-slate-200 outline-none font-bold text-sm sm:text-base focus:border-indigo-400 focus:bg-white transition-colors" placeholder="Sağ İfade" value={p.right} onChange={e=>{const np=[...currentQuestion.pairs];np[i].right=e.target.value;setCurrentQuestion({...currentQuestion,pairs:np});}} /></div>)}</div>}
+                    
+                    <button type="button" onClick={handleAddQuestion} className="w-full bg-slate-900 text-white py-4 sm:py-6 rounded-xl sm:rounded-[2.5rem] font-black text-xs sm:text-sm uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center gap-2"><IconPlusCircle size={18}/> Taslağa Ekle</button>
                   </div>
                </div>
             </div>
             <div className="md:col-span-4 space-y-6">
-              <div className="bg-white p-8 rounded-[3.5rem] shadow-sm border sticky top-24">
-                 <div className="flex justify-between items-center mb-8"><h3 className="font-black text-2xl uppercase tracking-tighter">Taslak ({newExam.questions.length})</h3><button type="button" onClick={handleSaveExam} className="bg-green-600 text-white px-5 py-2 rounded-xl text-[10px] font-black shadow-lg disabled:opacity-40 hover:bg-green-700" disabled={newExam.questions.length===0}>Yayınla</button></div>
-                 <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                  {newExam.questions.length===0 && <div className="py-20 text-center text-slate-200 font-black italic border-4 border-dashed rounded-[2.5rem] uppercase tracking-widest"><IconBookOpen className="mx-auto mb-2 opacity-50"/> BOŞ</div>}
-                  {newExam.questions.map((q,i)=>(<div key={i} className="p-5 bg-slate-50 rounded-[2rem] border-2 relative group hover:border-indigo-200 transition-all"><div className="flex justify-between items-start mb-2"><span className="text-[8px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full uppercase">{q.topic || 'Genel'}</span><button type="button" onClick={()=>setNewExam({...newExam, questions:newExam.questions.filter((_,idx)=>idx!==i)})} className="text-slate-300 hover:text-red-500 transition-colors"><IconTrash2/></button></div><p className="text-[11px] font-black text-slate-700 line-clamp-2 leading-tight uppercase tracking-tighter">{i+1}. {q.text}</p></div>))}
+              <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[3.5rem] shadow-sm border border-slate-100 sticky top-24">
+                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6 sm:mb-8">
+                     <div>
+                         <h3 className="font-black text-xl sm:text-2xl uppercase tracking-tighter text-slate-900">Taslak</h3>
+                         <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase mt-1">{newExam.questions.length} Soru Eklendi</p>
+                     </div>
+                     <button type="button" onClick={handleSaveExam} className="w-full sm:w-auto bg-green-600 text-white px-6 sm:px-8 py-3 rounded-xl sm:rounded-full text-xs sm:text-sm font-black shadow-md hover:shadow-lg disabled:opacity-40 hover:bg-green-700 transition-all flex items-center justify-center gap-2" disabled={newExam.questions.length===0}><IconSend size={16}/> YAYINLA</button>
+                 </div>
+                 <div className="space-y-3 sm:space-y-4 max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+                  {newExam.questions.length===0 && <div className="py-12 sm:py-20 text-center text-slate-300 font-black italic border-2 sm:border-4 border-dashed rounded-xl sm:rounded-[2.5rem] uppercase tracking-widest text-xs sm:text-base"><IconBookOpen size={40} className="mx-auto mb-3 sm:mb-4 opacity-50"/> BOŞ</div>}
+                  {newExam.questions.map((q,i)=>(
+                      <div key={i} className="p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] border border-slate-200 relative group hover:border-indigo-300 hover:shadow-md transition-all">
+                          <div className="flex justify-between items-start mb-2 sm:mb-3">
+                              <span className="text-[7px] sm:text-[9px] font-black bg-indigo-100 text-indigo-700 px-2 sm:px-3 py-1 rounded-md uppercase tracking-wider">{q.type === 'multiple-choice' ? 'TEST' : q.type === 'short-answer' ? 'KISA' : q.type === 'true-false' ? 'D/Y' : 'EŞLEŞTİR'}</span>
+                              <button type="button" onClick={()=>setNewExam({...newExam, questions:newExam.questions.filter((_,idx)=>idx!==i)})} className="text-slate-300 hover:text-red-500 bg-white p-1.5 rounded-lg shadow-sm border border-slate-100 transition-colors"><IconTrash2 size={14}/></button>
+                          </div>
+                          <p className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-3 leading-snug">{i+1}. {q.text}</p>
+                      </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -650,52 +666,69 @@ const App = () => {
         )}
 
         {view === 'analytics' && activeExam && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 print:hidden">
-              <div className="flex items-center gap-4"><button type="button" onClick={() => setView('teacher')} className="p-4 bg-white rounded-3xl text-slate-400 shadow-xl border border-slate-100 hover:scale-110 active:scale-95 transition-all"><IconChevronLeft/></button><h2 className="text-4xl font-black text-slate-900 uppercase pr-10">{activeExam.title}</h2></div>
-              <div className="flex gap-2"><button type="button" onClick={handleExportCSV} className="bg-white text-indigo-600 px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 border-2 border-indigo-50 shadow-sm transition-all hover:bg-indigo-50"><IconDownload/> EXCEL</button><button type="button" onClick={handlePrint} className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-slate-800 shadow-xl transition-all"><IconPrinter/> YAZDIR / PDF</button></div>
+          <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
+              <div className="flex items-center gap-3 sm:gap-4"><button type="button" onClick={() => setView('teacher')} className="p-3 sm:p-4 bg-white rounded-xl sm:rounded-3xl text-slate-400 shadow-sm sm:shadow-xl border border-slate-100 hover:scale-105 active:scale-95 transition-all"><IconChevronLeft size={24}/></button><h2 className="text-2xl sm:text-4xl font-black text-stone-900 uppercase tracking-tight line-clamp-1">{activeExam.title}</h2></div>
+              <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto"><button type="button" onClick={handleExportCSV} className="flex-1 sm:flex-none justify-center bg-white text-indigo-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 border border-indigo-100 shadow-sm hover:bg-indigo-50 transition-all"><IconDownload size={16}/> EXCEL</button><button type="button" onClick={handlePrint} className="flex-1 sm:flex-none justify-center bg-slate-900 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 hover:bg-slate-800 shadow-md transition-all"><IconPrinter size={16}/> <span className="hidden sm:inline">YAZDIR /</span> PDF</button></div>
             </div>
-            <div id="report-content" className="space-y-8 print:m-0 print:p-0">
-              <div className="grid md:grid-cols-12 gap-8">
-                 <div className="md:col-span-4 space-y-8">
-                    <div className="bg-white rounded-[4rem] p-10 shadow-sm border border-slate-100">
-                      <h3 className="font-black text-lg mb-8 uppercase text-slate-400 tracking-widest">Konu Analizi</h3>
-                      <div className="space-y-6">{getTopicAnalysis(activeExam.id).map((t, i) => (<div key={i}><div className="flex justify-between text-[10px] font-black mb-2 uppercase text-indigo-900"><span>{t.name}</span><span>%{t.percentage}</span></div><div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border"><div className="bg-indigo-600 h-full transition-all duration-1000" style={{width: t.percentage + "%"}}></div></div></div>))}</div>
+            <div id="report-content" className="space-y-6 sm:space-y-8 print:m-0 print:p-0">
+              <div className="grid md:grid-cols-12 gap-6 sm:gap-8">
+                 <div className="md:col-span-4 space-y-6 sm:space-y-8">
+                    <div className="bg-white rounded-2xl sm:rounded-[4rem] p-6 sm:p-10 shadow-sm border border-slate-100">
+                      <h3 className="font-black text-base sm:text-lg mb-6 sm:mb-8 uppercase text-slate-400 tracking-widest flex items-center gap-2"><IconActivity size={18}/> Konu Analizi</h3>
+                      <div className="space-y-4 sm:space-y-6">{getTopicAnalysis(activeExam.id).map((t, i) => (<div key={i}><div className="flex justify-between text-[9px] sm:text-[10px] font-black mb-1.5 sm:mb-2 uppercase text-indigo-900 tracking-wider"><span>{t.name}</span><span>%{t.percentage}</span></div><div className="w-full bg-slate-100 h-1.5 sm:h-2 rounded-full overflow-hidden border border-slate-200"><div className="bg-indigo-600 h-full transition-all duration-1000 ease-out" style={{width: t.percentage + "%"}}></div></div></div>))}</div>
+                      {getTopicAnalysis(activeExam.id).length === 0 && <div className="text-center py-8 sm:py-12 border-2 border-dashed border-slate-100 rounded-xl sm:rounded-3xl"><p className="text-slate-300 font-bold uppercase text-[9px] sm:text-[10px] tracking-widest">Henüz yeterli veri yok</p></div>}
                     </div>
-                    <div className="bg-indigo-600 rounded-[4rem] p-10 text-white text-center shadow-2xl"><p className="text-[10px] font-black uppercase opacity-60 mb-4 tracking-widest">Ortalama Başarı</p><p className="text-8xl font-black tracking-tighter">%{ (submissions.filter(s=>s.examId===activeExam.id).reduce((a,b)=>a+(Number(b?.score)||0),0)/(submissions.filter(s=>s.examId===activeExam.id).length||1)).toFixed(1) }</p></div>
+                    <div className="bg-indigo-600 rounded-2xl sm:rounded-[4rem] p-8 sm:p-10 text-white text-center shadow-lg sm:shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10"><IconTarget size={100}/></div>
+                        <p className="text-[9px] sm:text-[10px] font-black uppercase opacity-70 mb-2 sm:mb-4 tracking-widest relative z-10">Sınıf Ortalaması</p>
+                        <p className="text-6xl sm:text-8xl font-black tracking-tighter relative z-10">%{ (submissions.filter(s=>s.examId===activeExam.id).reduce((a,b)=>a+(Number(b?.score)||0),0)/(submissions.filter(s=>s.examId===activeExam.id).length||1)).toFixed(1) }</p>
+                    </div>
                  </div>
-                 <div className="md:col-span-8 bg-white rounded-[4rem] shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white sticky top-0"><h3 className="font-black text-xl uppercase tracking-tighter">Katılımcı Listesi</h3><span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-full uppercase tracking-widest">{submissions.filter(s=>s.examId===activeExam.id).length} ÖĞRENCİ</span></div>
-                    <div className="overflow-x-auto"><table className="w-full text-left whitespace-nowrap"><thead className="bg-slate-50 border-b uppercase text-[10px] font-black text-slate-400 tracking-widest"><tr><th className="p-6">Öğrenci Bilgileri</th><th className="p-6 text-center">Doğru</th><th className="p-6 text-center">Başarı</th><th className="p-6 text-center">Cihaz ID</th></tr></thead><tbody className="divide-y divide-slate-50 font-black text-slate-800">{submissions.filter(s=>s.examId===activeExam.id).map((sub, i) => (<tr key={i} className="hover:bg-indigo-50/10 transition-colors"><td className="p-6"><div className="text-xl tracking-tighter uppercase text-indigo-900">{sub.studentName}</div><div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">NO: {sub.studentNumber}</div></td><td className="p-6 text-center text-slate-400 font-mono">{sub.correctCount} / {sub.totalQuestions}</td><td className="p-6 text-center"><span className="inline-block px-5 py-1.5 bg-white border-4 border-indigo-50 rounded-full text-indigo-600 text-sm shadow-sm font-black">%{Number(sub.score).toFixed(1)}</span></td><td className="p-6 text-center text-[8px] text-slate-300 font-mono flex flex-col items-center justify-center gap-1"><IconSmartphone/>{sub.deviceId}</td></tr>))}</tbody></table></div>
+                 <div className="md:col-span-8 bg-white rounded-2xl sm:rounded-[4rem] shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                    <div className="p-5 sm:p-8 border-b border-slate-100 flex justify-between items-center bg-white"><h3 className="font-black text-lg sm:text-xl uppercase tracking-tighter text-slate-800 flex items-center gap-2"><IconUser size={20} className="text-indigo-500"/> Katılımcılar</h3><span className="text-[9px] sm:text-[10px] font-black bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1 sm:py-1.5 rounded-md sm:rounded-full uppercase tracking-widest border border-indigo-100">{submissions.filter(s=>s.examId===activeExam.id).length} Kişi</span></div>
+                    <div className="overflow-x-auto flex-1">
+                        <table className="w-full text-left whitespace-nowrap min-w-[600px]">
+                            <thead className="bg-slate-50 border-b uppercase text-[8px] sm:text-[10px] font-black text-slate-400 tracking-widest"><tr><th className="p-4 sm:p-6 font-bold">Öğrenci Bilgileri</th><th className="p-4 sm:p-6 text-center font-bold">Doğru / Toplam</th><th className="p-4 sm:p-6 text-center font-bold">Başarı Oranı</th><th className="p-4 sm:p-6 text-center font-bold text-slate-300">Sistem ID</th></tr></thead>
+                            <tbody className="divide-y divide-slate-100 font-bold sm:font-black text-slate-800">
+                                {submissions.filter(s=>s.examId===activeExam.id).length === 0 && <tr><td colSpan="4" className="p-10 text-center text-slate-300 text-sm">Henüz sınava giren öğrenci yok.</td></tr>}
+                                {submissions.filter(s=>s.examId===activeExam.id).map((sub, i) => (
+                                    <tr key={i} className="hover:bg-indigo-50/30 transition-colors">
+                                        <td className="p-4 sm:p-6"><div className="text-base sm:text-xl tracking-tight uppercase text-indigo-900 mb-0.5">{sub.studentName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Numara: {sub.studentNumber}</div></td>
+                                        <td className="p-4 sm:p-6 text-center text-slate-500 font-mono text-sm sm:text-base">{sub.correctCount} <span className="text-slate-300">/</span> {sub.totalQuestions}</td>
+                                        <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 sm:px-5 py-1 sm:py-1.5 bg-white border-2 sm:border-4 rounded-full text-xs sm:text-sm shadow-sm font-black " + (Number(sub.score) >= 50 ? 'border-green-100 text-green-600' : 'border-red-100 text-red-500')}>%{Number(sub.score).toFixed(1)}</span></td>
+                                        <td className="p-4 sm:p-6 text-center text-[7px] sm:text-[8px] text-slate-300 font-mono flex flex-col items-center justify-center gap-1 opacity-50"><IconSmartphone size={12}/>{sub.deviceId}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                  </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* YENİ: Tamamen Güvenli Öğrenci Giriş Paneli (Liste kaldırıldı, Kahoot tarzı koda bağlandı) */}
+        {/* KOD İLE GİRİŞ EKRANI */}
         {view === 'student' && (
-          <div className="max-w-lg mx-auto py-12 animate-in fade-in duration-500 print:hidden">
-             <div className="bg-white p-12 md:p-16 rounded-[4rem] shadow-2xl border border-slate-50 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-32 bg-indigo-600/5"></div>
-                <div className="bg-indigo-600 w-24 h-24 rounded-3xl mx-auto flex items-center justify-center text-white mb-10 shadow-2xl relative z-10"><IconUser size={48} /></div>
+          <div className="max-w-lg mx-auto py-6 sm:py-12 animate-in fade-in zoom-in duration-500 no-print px-4">
+             <div className="bg-white p-8 sm:p-12 md:p-16 rounded-3xl sm:rounded-[4rem] shadow-xl sm:shadow-2xl border border-slate-100 text-center relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-24 sm:h-32 bg-gradient-to-b from-indigo-50 to-transparent"></div>
+                <div className="bg-indigo-600 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl mx-auto flex items-center justify-center text-white mb-6 sm:mb-10 shadow-lg sm:shadow-2xl relative z-10 transform -rotate-3"><IconUser size={40} className="sm:w-12 sm:h-12"/></div>
                 
-                <h2 className="text-4xl font-black mb-4 uppercase tracking-tighter text-slate-900 relative z-10">Sınav Girişi</h2>
-                <p className="text-slate-400 font-bold mb-10 text-sm relative z-10">Öğretmeninizin size verdiği Sınav Kodunu girin.</p>
+                <h2 className="text-3xl sm:text-4xl font-black mb-2 sm:mb-4 uppercase tracking-tighter text-stone-900 relative z-10">Sınav Girişi</h2>
+                <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mb-8 sm:mb-10 relative z-10">Öğretmeninizin size verdiği kodu girin.</p>
                 
-                <div className="space-y-4 mb-10 relative z-10">
-                    <input className="w-full p-6 bg-slate-50 border rounded-[2rem] text-center font-black text-2xl shadow-inner outline-none focus:ring-4 focus:ring-indigo-500 transition-all uppercase" placeholder="AD SOYAD" value={studentName} onChange={e => setStudentName(e.target.value.toUpperCase())} />
-                    <input className="w-full p-6 bg-slate-50 border rounded-[2rem] text-center font-black text-xl shadow-inner outline-none focus:ring-4 focus:ring-indigo-500 transition-all uppercase tracking-widest" placeholder="OKUL NUMARASI" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} />
+                <div className="space-y-3 sm:space-y-4 mb-8 sm:mb-10 relative z-10">
+                    <input className="w-full p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-[2rem] text-center font-black text-lg sm:text-2xl shadow-inner outline-none focus:ring-2 sm:focus:ring-4 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all uppercase placeholder:text-slate-300" placeholder="AD SOYAD" value={studentName} onChange={e => setStudentName(e.target.value.toUpperCase())} />
+                    <input className="w-full p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-[2rem] text-center font-black text-base sm:text-xl shadow-inner outline-none focus:ring-2 sm:focus:ring-4 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all uppercase tracking-widest placeholder:text-slate-300" placeholder="OKUL NUMARASI" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} />
                     
-                    <div className="pt-4">
-                        <input className="w-full p-6 bg-indigo-50 border-2 border-indigo-200 rounded-[2rem] text-center font-black text-3xl shadow-inner outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all uppercase tracking-[0.2em] text-indigo-700 placeholder-indigo-300" placeholder="SINAV KODU" value={studentExamCode} onChange={e => setStudentExamCode(e.target.value.toUpperCase())} />
+                    <div className="pt-2 sm:pt-4">
+                        <input className="w-full p-4 sm:p-6 bg-indigo-50 border-2 border-indigo-200 rounded-xl sm:rounded-[2rem] text-center font-black text-xl sm:text-3xl shadow-inner outline-none focus:border-indigo-500 focus:ring-2 sm:focus:ring-4 focus:ring-indigo-500/20 transition-all uppercase tracking-[0.2em] text-indigo-700 placeholder-indigo-300" placeholder="SINAV KODU" value={studentExamCode} onChange={e => setStudentExamCode(e.target.value.toUpperCase())} />
                     </div>
                 </div>
 
-                <button 
-                    onClick={handleStudentStart} 
-                    className="w-full bg-indigo-600 text-white py-6 rounded-[3rem] font-black text-2xl hover:scale-105 active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-3 relative z-10"
-                >
+                <button type="button" onClick={handleStudentStart} className="w-full bg-indigo-600 text-white py-5 sm:py-6 rounded-xl sm:rounded-[3rem] font-black text-xl sm:text-2xl hover:scale-105 active:scale-95 transition-all shadow-xl sm:shadow-2xl flex items-center justify-center gap-3 relative z-10">
                     BAŞLA <IconChevronRight size={28} />
                 </button>
              </div>
@@ -703,39 +736,51 @@ const App = () => {
         )}
 
         {view === 'exam' && activeExam && (
-          <div className="max-w-4xl mx-auto pb-32 animate-in slide-in-from-right print:hidden">
-             <div className="bg-slate-900 text-white p-12 rounded-t-[5rem] flex justify-between items-center sticky top-20 z-40 shadow-2xl">
-                <div><h2 className="text-4xl font-black uppercase tracking-tight leading-none text-indigo-400">{activeExam.title}</h2><p className="text-slate-400 text-xs font-black uppercase tracking-widest mt-4">{studentName} • NO: {studentNumber}</p></div>
-                <div className={"px-10 py-5 rounded-[2.5rem] font-mono text-4xl bg-white/10 flex items-center gap-4 border-2 border-white/10 transition-all " + (timeLeft < 60 ? 'text-red-400 animate-pulse' : 'text-indigo-300')}><IconClock/> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
+          <div className="max-w-4xl mx-auto pb-20 sm:pb-32 animate-in slide-in-from-right no-print">
+             <div className="bg-slate-900 text-white p-6 sm:p-12 rounded-t-3xl sm:rounded-t-[5rem] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 sm:gap-0 sticky top-0 sm:top-20 z-40 shadow-2xl border-b-4 border-indigo-500/30">
+                <div>
+                    <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight leading-tight text-indigo-300 mb-2">{activeExam.title}</h2>
+                    <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center"><IconUser size={14}/></div><p className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-widest">{studentName} <span className="opacity-50 mx-1">|</span> {studentNumber}</p></div>
+                </div>
+                <div className={"w-full sm:w-auto flex justify-center sm:justify-start px-4 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-mono text-xl sm:text-2xl bg-black/40 items-center gap-2 sm:gap-3 border border-white/10 transition-colors shadow-inner " + (timeLeft < 60 ? 'text-red-400 bg-red-900/20 border-red-500/50 animate-pulse' : 'text-white')}><IconClock size={24} className="opacity-50" /> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
              </div>
-             <div className="bg-white p-8 md:p-16 rounded-b-[5rem] shadow-2xl space-y-24 border-x-2 border-b-2">
+             <div className="bg-white p-6 sm:p-10 md:p-16 rounded-b-3xl sm:rounded-b-[5rem] shadow-xl sm:shadow-2xl space-y-16 sm:space-y-24 border-x border-b border-slate-200">
                 {(activeExam.questions || []).map((q, qIdx) => (
-                   <div key={qIdx} className="space-y-12 pb-24 border-b last:border-0 border-slate-50">
-                      <div className="flex flex-col md:flex-row gap-8 md:gap-10">
-                         <span className="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center font-black text-3xl shrink-0 shadow-xl rotate-[-5deg]">{qIdx + 1}</span>
-                         <div className="flex-1 w-full">
-                            <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4"><p className="text-3xl md:text-4xl font-black text-slate-800 leading-tight uppercase tracking-tighter">{q.text}</p><span className="text-[10px] font-black bg-slate-900 text-white px-4 py-1.5 rounded-full uppercase tracking-widest shadow-xl shrink-0">{q.topic || 'Genel'}</span></div>
-                            {q.imageUrl && <div className="mb-12 rounded-[3rem] overflow-hidden border-8 border-slate-50 shadow-inner"><img src={q.imageUrl} className="max-h-[500px] w-full object-contain" alt="Görsel" /></div>}
+                   <div key={qIdx} className="space-y-8 sm:space-y-12 pb-16 sm:pb-24 border-b last:border-0 border-slate-100 relative">
+                      <div className="flex flex-col md:flex-row gap-6 sm:gap-10">
+                         <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-2xl sm:text-3xl shrink-0 shadow-lg sm:shadow-xl transform -rotate-3 border-b-4 border-indigo-800">{qIdx + 1}</div>
+                         <div className="flex-1 w-full mt-2 sm:mt-0">
+                            <div className="flex flex-col items-start gap-3 sm:gap-4 mb-6 sm:mb-10">
+                                <span className="text-[8px] sm:text-[10px] font-black bg-slate-100 text-slate-500 px-3 sm:px-4 py-1 sm:py-1.5 rounded-md sm:rounded-full uppercase tracking-widest border border-slate-200 flex items-center gap-1.5"><IconBookOpen size={12}/> {q.topic || 'Genel'}</span>
+                                <p className="text-xl sm:text-3xl md:text-4xl font-black text-stone-800 leading-snug sm:leading-tight uppercase tracking-tight">{q.text}</p>
+                            </div>
                             
-                            {q.type === 'multiple-choice' && <div className="grid grid-cols-1 md:grid-cols-2 gap-8">{q.options.map((opt, oIdx) => (<button type="button" key={oIdx} onClick={() => setAnswers({...answers, [qIdx]: oIdx})} className={"p-8 text-left rounded-[3rem] border-4 font-black transition-all flex justify-between items-center group relative overflow-hidden " + (answers[qIdx] === oIdx ? 'border-indigo-600 bg-indigo-600 text-white shadow-2xl scale-[1.02]' : 'border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-200 text-slate-400')}><span className="text-xl flex items-center gap-4"><span className={"font-black text-2xl " + (answers[qIdx] === oIdx ? 'text-indigo-200' : 'text-slate-200 group-hover:text-indigo-600')}>{String.fromCharCode(65 + oIdx)}</span> {opt}</span>{answers[qIdx] === oIdx && <IconCheckCircle/>}</button>))}</div>}
+                            {q.imageUrl && <div className="mb-8 sm:mb-12 rounded-2xl sm:rounded-[3rem] overflow-hidden border-4 sm:border-8 border-slate-50 shadow-inner bg-slate-100 flex items-center justify-center p-4"><img src={q.imageUrl} className="max-h-[300px] sm:max-h-[500px] w-full object-contain rounded-xl" alt="Soru Görseli" /></div>}
                             
-                            {q.type === 'true-false' && <div className="flex gap-8">{['DOĞRU','YANLIŞ'].map((opt, oIdx) => (<button type="button" key={oIdx} onClick={() => setAnswers({...answers, [qIdx]: oIdx})} className={"flex-1 p-10 rounded-[3rem] border-4 font-black text-3xl transition-all " + (answers[qIdx] === oIdx ? 'border-indigo-600 bg-indigo-600 text-white shadow-xl' : 'border-slate-100 bg-slate-50 text-slate-300 hover:bg-white')}>{opt}</button>))}</div>}
+                            {q.type === 'multiple-choice' && <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">{q.options.map((opt, oIdx) => (<button type="button" key={oIdx} onClick={() => setAnswers({...answers, [qIdx]: oIdx})} className={"p-5 sm:p-8 text-left rounded-2xl sm:rounded-[3rem] border-2 sm:border-4 font-black transition-all flex justify-between items-center group relative overflow-hidden " + (answers[qIdx] === oIdx ? 'border-indigo-600 bg-indigo-600 text-white shadow-2xl scale-[1.02] transform' : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/30 text-slate-500 hover:text-slate-800')}><span className="text-base sm:text-xl flex items-center gap-3 sm:gap-4 z-10"><span className={"w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg sm:rounded-xl font-black text-lg sm:text-2xl transition-colors " + (answers[qIdx] === oIdx ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600')}>{String.fromCharCode(65 + oIdx)}</span> <span className="leading-tight">{opt}</span></span>{answers[qIdx] === oIdx && <IconCheckCircle className="text-white z-10 shrink-0" size={24} />}{answers[qIdx] === oIdx && <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white/10 to-transparent"></div>}</button>))}</div>}
                             
-                            {q.type === 'short-answer' && <input type="text" placeholder="CEVABINIZI YAZIN..." className="w-full p-10 bg-slate-50 rounded-[3rem] border-4 border-transparent outline-none focus:border-indigo-500 focus:bg-white font-black text-4xl text-center uppercase transition-all tracking-widest shadow-inner" value={answers[qIdx] || ''} onChange={e => setAnswers({...answers, [qIdx]: e.target.value})} />}
+                            {q.type === 'true-false' && <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">{['DOĞRU','YANLIŞ'].map((opt, oIdx) => (<button type="button" key={oIdx} onClick={() => setAnswers({...answers, [qIdx]: oIdx})} className={"flex-1 p-6 sm:p-10 rounded-2xl sm:rounded-[3rem] border-2 sm:border-4 font-black text-xl sm:text-3xl transition-all flex items-center justify-center gap-4 " + (answers[qIdx] === oIdx ? (oIdx===0 ? 'border-green-500 bg-green-500 text-white shadow-xl scale-[1.02]' : 'border-red-500 bg-red-500 text-white shadow-xl scale-[1.02]') : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700')}>{opt}</button>))}</div>}
                             
-                            {q.type === 'matching' && <div className="space-y-6 mt-8">{q.pairs.map((pair, pIdx) => (<div key={pIdx} className="flex flex-col md:flex-row gap-4 items-center bg-slate-50 p-6 rounded-[2rem] border-4 border-slate-100 hover:bg-white transition-all shadow-sm focus-within:border-indigo-500"><span className="w-full md:flex-1 font-black text-xl text-slate-800 text-center md:text-left">{pair.left}</span><select className="w-full md:flex-1 p-6 rounded-[1.5rem] border-4 border-slate-200 outline-none focus:border-indigo-500 font-bold text-slate-600 bg-white shadow-sm" value={answers[qIdx]?.[pair.left] || ''} onChange={(e) => { const currentAns = answers[qIdx] || {}; setAnswers({...answers, [qIdx]: {...currentAns, [pair.left]: e.target.value}}); }}><option value="">-- Eşleştirin --</option>{[...q.pairs].map(p => p.right).sort().map((ro, roIdx) => (<option key={roIdx} value={ro}>{ro}</option>))}</select></div>))}</div>}
+                            {q.type === 'short-answer' && <div className="relative"><input type="text" placeholder="Cevabınızı buraya yazın..." className="w-full p-6 sm:p-10 bg-slate-50 rounded-2xl sm:rounded-[3rem] border-2 sm:border-4 border-slate-200 outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 font-black text-xl sm:text-3xl md:text-4xl text-center uppercase transition-all tracking-widest shadow-inner placeholder:text-slate-300 placeholder:text-lg sm:placeholder:text-2xl" value={answers[qIdx] || ''} onChange={e => setAnswers({...answers, [qIdx]: e.target.value})} /></div>}
+                            
+                            {q.type === 'matching' && <div className="space-y-4 sm:space-y-6 mt-6 sm:mt-8">{q.pairs.map((pair, pIdx) => (<div key={pIdx} className="flex flex-col sm:flex-row gap-3 sm:gap-6 items-stretch sm:items-center bg-white p-4 sm:p-6 rounded-xl sm:rounded-[2rem] border-2 border-slate-200 hover:border-indigo-300 transition-colors shadow-sm"><div className="flex-1 bg-slate-50 py-3 sm:py-4 px-5 sm:px-6 rounded-lg sm:rounded-2xl border border-slate-100 flex items-center justify-between sm:justify-start gap-4"><span className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center font-black text-xs sm:text-sm text-slate-400 shadow-sm border border-slate-100 shrink-0">{pIdx+1}</span><span className="font-black text-base sm:text-xl text-stone-800 text-right sm:text-left flex-1 break-words">{pair.left}</span></div><div className="hidden sm:flex items-center justify-center w-8 text-slate-300"><IconChevronRight size={24}/></div><div className="flex-1 relative"><select className={"w-full py-4 sm:py-5 px-4 sm:px-6 rounded-lg sm:rounded-2xl border-2 outline-none font-bold sm:font-black text-sm sm:text-lg appearance-none transition-all shadow-sm cursor-pointer " + (answers[qIdx]?.[pair.left] ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 focus:border-indigo-400')} value={answers[qIdx]?.[pair.left] || ''} onChange={(e) => { const currentAns = answers[qIdx] || {}; setAnswers({...answers, [qIdx]: {...currentAns, [pair.left]: e.target.value}}); }}><option value="" disabled className="text-slate-300">Seçim Yapın...</option>{[...q.pairs].map(p => p.right).sort().map((ro, roIdx) => (<option key={roIdx} value={ro} className="font-bold text-slate-700 py-2">{ro}</option>))}</select><div className="absolute right-4 sm:right-6 top-1/2 transform -translate-y-1/2 pointer-events-none text-slate-400"><IconChevronLeft size={20} className="rotate-270 transform"/></div></div></div>))}</div>}
                          </div>
                       </div>
                    </div>
                 ))}
-                <div className="flex flex-col items-center gap-6"><button type="button" onClick={handleFinishExam} className="bg-indigo-600 text-white px-24 py-8 rounded-[4rem] font-black text-3xl hover:bg-indigo-700 shadow-2xl transition-all hover:scale-110 active:scale-95 flex items-center gap-6 uppercase tracking-tighter"><IconSend/> SINAVI TAMAMLA</button><p className="text-slate-300 font-bold uppercase tracking-widest text-[10px] animate-pulse italic">Sınav sonuçlarınız bulut sunucularına kaydedilecektir.</p></div>
+                
+                <div className="flex flex-col items-center gap-4 sm:gap-6 pt-10 sm:pt-20 border-t-2 border-dashed border-slate-200">
+                    <button type="button" onClick={handleFinishExam} className="w-full sm:w-auto bg-indigo-600 text-white px-8 sm:px-24 py-5 sm:py-8 rounded-2xl sm:rounded-[4rem] font-black text-xl sm:text-3xl shadow-xl sm:shadow-2xl hover:bg-indigo-700 hover:shadow-indigo-500/30 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-4 sm:gap-6 uppercase tracking-tighter border-b-4 sm:border-b-8 border-indigo-800"><IconSend size={32} /> <span className="mt-1">Sınavı Bitir</span></button>
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[8px] sm:text-[10px] flex items-center gap-2"><IconLock size={12}/> Yanıtlarınız bulut sistemine şifrelenerek kaydedilecektir.</p>
+                </div>
              </div>
           </div>
         )}
       </main>
 
-      <footer className="w-full text-center py-8 mt-auto border-t border-slate-200 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] print:hidden">
-        tasarım ve geliştirme: <a href="mailto:uguriskin@gmail.com" className="text-indigo-600 hover:text-indigo-800 transition-colors lowercase">uguriskin@gmail.com</a>
+      <footer className="w-full text-center py-6 sm:py-8 mt-auto border-t border-slate-200 bg-white print:hidden">
+          <p className="text-slate-400 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mb-2">Tasarım & Geliştirme</p>
+          <a href="mailto:uguriskin@gmail.com" className="inline-flex items-center gap-2 text-indigo-500 hover:text-indigo-700 font-bold text-xs sm:text-sm transition-colors bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100"><IconTarget size={14} className="hidden sm:inline"/> uguriskin@gmail.com</a>
       </footer>
     </div>
   );
