@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, collection, addDoc, onSnapshot, 
@@ -8,7 +8,7 @@ import {
   getAuth, signInAnonymously, onAuthStateChanged 
 } from 'firebase/auth';
 
-// --- İkonlar (Dış kütüphane hatalarını önlemek için kodun içine gömüldü) ---
+// --- İkonlar ---
 const IconTarget = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
 const IconLock = ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
 const IconLogOut = ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
@@ -29,6 +29,7 @@ const IconSend = ({size=40, className=""}) => <svg className={className} width={
 const IconActivity = ({size=64, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
 const IconActivitySmall = ({size=32, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
 const IconFileText = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
+const IconAlertTriangle = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
 
 // --- Firebase Yapılandırması ---
 const firebaseConfig = {
@@ -51,7 +52,6 @@ const getInitialQuestion = () => ({
   pairs: [{left: '', right: ''}, {left: '', right: ''}, {left: '', right: ''}] 
 });
 
-// --- Yardımcı Fonksiyonlar: Doğru/Yanlış Cevap Metinleri ---
 const getCorrectAnswerText = (q) => {
     if (q.type === 'multiple-choice') return String.fromCharCode(65 + q.correct) + " - " + q.options[q.correct];
     if (q.type === 'true-false') return q.correct === 0 ? 'DOĞRU' : 'YANLIŞ';
@@ -72,7 +72,6 @@ const getGivenAnswerText = (q, ans) => {
     return String(ans);
 };
 
-// --- Yardımcı Fonksiyon: Soruları Karıştır ---
 const shuffleArray = (array) => {
     const newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
@@ -111,15 +110,17 @@ const App = () => {
   const [currentQuestion, setCurrentQuestion] = useState(getInitialQuestion());
   const [activeExam, setActiveExam] = useState(null);
   
-  // ÖĞRENCİ BİLGİLERİ VE SONUÇ DURUMU
   const [studentName, setStudentName] = useState('');
   const [studentNumber, setStudentNumber] = useState('');
   const [studentExamCode, setStudentExamCode] = useState(''); 
   const [answers, setAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(0);
-  const [examResult, setExamResult] = useState(null); // YENİ: Öğrencinin sınav sonucu
+  const [examResult, setExamResult] = useState(null); 
 
-  // Yükleme Ekranı Kilidi
+  // --- YENİ: KOPYA (İHLAL) TAKİP STATE'LERİ ---
+  const [cheatWarnings, setCheatWarnings] = useState(0);
+  const isAway = useRef(false);
+
   useEffect(() => {
     const forceUnlock = setTimeout(() => {
       setLoading(false);
@@ -141,40 +142,74 @@ const App = () => {
     } catch (e) {}
   }, []);
 
+  // --- YENİ: KOPYA KORUMA DİNLEYİCİSİ (Sadece sınav esnasında çalışır) ---
+  useEffect(() => {
+      const handleAway = () => {
+          if (view === 'exam' && !isAway.current) {
+              isAway.current = true;
+              setCheatWarnings(prev => prev + 1);
+          }
+      };
+
+      const handleReturn = () => {
+          if (view === 'exam' && isAway.current) {
+              isAway.current = false;
+          }
+      };
+
+      const onVisibilityChange = () => {
+          if (document.hidden) handleAway();
+          else handleReturn();
+      };
+
+      const onBlur = () => handleAway();
+      const onFocus = () => handleReturn();
+
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      window.addEventListener('blur', onBlur);
+      window.addEventListener('focus', onFocus);
+
+      return () => {
+          document.removeEventListener('visibilitychange', onVisibilityChange);
+          window.removeEventListener('blur', onBlur);
+          window.removeEventListener('focus', onFocus);
+      }
+  }, [view]);
+
+  // --- YENİ: KOPYA UYARISI YÖNETİMİ ---
+  useEffect(() => {
+      if (view !== 'exam' || cheatWarnings === 0) return;
+
+      if (cheatWarnings === 1) {
+          showModal("🚨 Güvenlik Uyarısı (1/3)", "Sınav ekranından ayrıldığınız tespit edildi!\n\nBaşka sekmeye geçmek veya pencereyi küçültmek kural ihlalidir. 3 uyarı alırsanız sınavınız otomatik sonlandırılır.", "error");
+      } else if (cheatWarnings === 2) {
+          showModal("🚨 Son Uyarı (2/3)", "Sınav ekranından tekrar ayrıldınız!\n\nBir kez daha kural ihlali yaparsanız sınavınız iptal edilecek ve sıfır (0) puan verilecektir.", "error");
+      } else if (cheatWarnings >= 3) {
+          // 3 İhlalde doğrudan sınavı bitir
+          showModal("❌ Sınav Sonlandırıldı", "Kopya kurallarını üst üste ihlal ettiğiniz için sınavınız sistem tarafından otomatik olarak kapatıldı.", "error");
+          handleFinishExam();
+      }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cheatWarnings]);
+
   // --- API BAĞLANTISI ---
   async function callGemini(prompt, systemInstruction = "", pdfBase64 = null) {
     const currentKey = geminiKey ? geminiKey.trim() : "";
+    if (!currentKey) throw new Error("Lütfen 'AI Sihirbazı' panelindeki kutucuğa Google Gemini API Anahtarınızı girin.");
+    if (currentKey === firebaseConfig.apiKey) throw new Error("DİKKAT: Kutucuğa yapay zeka yerine FIREBASE şifrenizi girdiniz! Lütfen aistudio.google.com adresinden YENİ bir anahtar alıp kutucuğa yapıştırın.");
 
-    if (!currentKey) {
-        throw new Error("Lütfen 'AI Sihirbazı' panelindeki kutucuğa Google Gemini API Anahtarınızı girin.");
-    }
-
-    if (currentKey === firebaseConfig.apiKey) {
-        throw new Error("DİKKAT: Kutucuğa yapay zeka yerine FIREBASE şifrenizi girdiniz! Lütfen aistudio.google.com adresinden YENİ bir anahtar alıp kutucuğa yapıştırın.");
-    }
-
-    const modelsToTry = [
-        "gemini-2.5-flash",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-1.5-flash-8b",
-        "gemini-pro"
-    ];
-
+    const modelsToTry = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5-flash-8b", "gemini-pro"];
     let errorLogs = [];
 
     for (const model of modelsToTry) {
         try {
             const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
-            
             const combinedText = `SİSTEM YÖNERGESİ:\n${systemInstruction}\n\nKULLANICI TALEBİ:\n${prompt || "Ekli belgeye veya metne göre soru üret."}`;
             const parts = [{ text: combinedText }];
 
             if (pdfBase64) {
                 const base64Data = pdfBase64.split(',')[1];
-                parts.push({
-                    inlineData: { mimeType: "application/pdf", data: base64Data }
-                });
+                parts.push({ inlineData: { mimeType: "application/pdf", data: base64Data } });
             }
 
             const payload = { 
@@ -187,54 +222,31 @@ const App = () => {
                 ]
             };
             
-            const response = await fetch(endpoint, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(payload) 
-            });
-            
+            const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 const errMsg = errorData?.error?.message || errorData?.error?.status || `HTTP Hatası: ${response.status}`;
-                
-                if (errMsg.includes("API key not valid") || errMsg.includes("API key")) {
-                    throw new Error("API_KEY_ERROR");
-                }
+                if (errMsg.includes("API key not valid") || errMsg.includes("API key")) throw new Error("API_KEY_ERROR");
                 throw new Error(errMsg);
             }
             
             const result = await response.json();
-
-            if (result.promptFeedback && result.promptFeedback.blockReason) {
-                throw new Error(`Google Güvenlik Filtresi Engeli: ${result.promptFeedback.blockReason}`);
-            }
-            
-            if (result.candidates && result.candidates.length > 0) {
-                 return result.candidates[0].content.parts[0].text;
-            } else {
-                 throw new Error("Yapay Zeka soruyu hazırladı ancak boş yanıt döndürdü.");
-            }
-            
+            if (result.promptFeedback && result.promptFeedback.blockReason) throw new Error(`Google Güvenlik Filtresi Engeli: ${result.promptFeedback.blockReason}`);
+            if (result.candidates && result.candidates.length > 0) return result.candidates[0].content.parts[0].text;
+            else throw new Error("Yapay Zeka soruyu hazırladı ancak boş yanıt döndürdü.");
         } catch (err) { 
-            if (err.message === "API_KEY_ERROR") {
-                throw new Error("API_KEY_ERROR");
-            }
+            if (err.message === "API_KEY_ERROR") throw new Error("API_KEY_ERROR");
             errorLogs.push(`[${model}]: ${err.message}`);
         }
     }
-    
     throw new Error(`Google API Bağlantısı Başarısız Oldu.\n\nDetaylı Hata Kaydı:\n${errorLogs.join('\n\n')}`);
   }
 
   useEffect(() => {
     let isMounted = true;
-    const initAuth = async () => {
-      try { await signInAnonymously(auth); } catch (e) {}
-    };
+    const initAuth = async () => { try { await signInAnonymously(auth); } catch (e) {} };
     initAuth();
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if(isMounted) setUser(u || {uid: 'test-user'});
-    });
+    const unsub = onAuthStateChanged(auth, (u) => { if(isMounted) setUser(u || {uid: 'test-user'}); });
     return () => { isMounted = false; unsub(); };
   }, []);
 
@@ -246,10 +258,7 @@ const App = () => {
     if (user) {
       const examsRef = collection(db, 'artifacts', appId, 'public', 'data', 'exams');
       unsubExams = onSnapshot(examsRef, (s) => {
-        if(isMounted) {
-          setExams(s.docs.map(d => ({ id: d.id, ...d.data() })));
-          setLoading(false);
-        }
+        if(isMounted) { setExams(s.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); }
       }, () => { if(isMounted) setLoading(false); });
 
       const subsRef = collection(db, 'artifacts', appId, 'public', 'data', 'submissions');
@@ -257,7 +266,6 @@ const App = () => {
         if(isMounted) setSubmissions(s.docs.map(d => ({ id: d.id, ...d.data() })));
       });
     }
-
     return () => { isMounted = false; unsubExams(); unsubSubs(); };
   }, [user]);
 
@@ -300,9 +308,7 @@ const App = () => {
   const toggleAiType = (type) => {
     setAiConfig(prev => ({
       ...prev,
-      types: prev.types.includes(type) 
-        ? (prev.types.length > 1 ? prev.types.filter(t => t !== type) : prev.types)
-        : [...prev.types, type]
+      types: prev.types.includes(type) ? (prev.types.length > 1 ? prev.types.filter(t => t !== type) : prev.types) : [...prev.types, type]
     }));
   };
 
@@ -397,7 +403,10 @@ const App = () => {
         return;
     }
     
-    // YENİ: Soru sırasını her öğrenci için karıştır (Randomize)
+    // Güvenlik sayacı sıfırlama
+    setCheatWarnings(0);
+    isAway.current = false;
+    
     const shuffledQuestions = shuffleArray(foundExam.questions || []);
     
     setActiveExam({...foundExam, questions: shuffledQuestions}); 
@@ -408,9 +417,11 @@ const App = () => {
 
   const handleFinishExam = async () => {
     if (!activeExam) return;
-    let score = 0;
     
-    // YENİ: Hem sonucu hesapla hem de PDF çıktısı için cevapları formatla
+    // Güncel kopya sayısını al
+    const finalCheatCount = cheatWarnings;
+
+    let score = 0;
     const questionDetails = (activeExam.questions || []).map((q, idx) => {
       const ans = answers[idx];
       let isCorrect = false;
@@ -433,16 +444,17 @@ const App = () => {
     const submissionData = {
         examId: activeExam.id, studentName, studentNumber, deviceId,
         score: finalScorePercentage, correctCount: score,
-        totalQuestions: activeExam.questions.length, questionDetails, submittedAt: new Date().toISOString()
+        totalQuestions: activeExam.questions.length, questionDetails, 
+        submittedAt: new Date().toISOString(),
+        cheatWarnings: finalCheatCount // İhlalleri panele kaydet
     };
 
-    // Öğrenciye gösterilecek sonuç ekranı verisi
     setExamResult({ ...submissionData, details: questionDetails });
 
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'submissions'), submissionData);
       setActiveExam(null); setAnswers({}); setStudentExamCode('');
-      setView('result'); // YENİ: Landing yerine Sonuç ekranına yönlendir
+      setView('result'); 
     } catch (e) {
       setSubmissions(prev => [...prev, {...submissionData, id: Date.now().toString()}]);
       setActiveExam(null); setAnswers({}); setStudentExamCode('');
@@ -451,13 +463,48 @@ const App = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    const content = document.getElementById('report-content');
+    if (!content) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>${activeExam?.title || 'Sınav Analiz Raporu'}</title>
+                    <script src="https://cdn.tailwindcss.com"></script>
+                    <style>
+                        @media print { 
+                            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white !important; }
+                            .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+                        }
+                    </style>
+                </head>
+                <body class="p-8 bg-white text-slate-900">
+                    <div class="max-w-4xl mx-auto">
+                        <h2 class="text-3xl font-black mb-8 text-center uppercase tracking-tighter">${activeExam?.title || 'Sınav Raporu'}</h2>
+                        ${content.innerHTML}
+                    </div>
+                    <script>
+                        setTimeout(() => {
+                            window.print();
+                            window.close(); 
+                        }, 1000);
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    } else {
+        showModal("Uyarı", "Tarayıcınız açılır pencereleri engelliyor. Lütfen adres çubuğundan izin verin.", "error");
+    }
   };
 
   const handleExportCSV = () => {
     const examSubs = submissions.filter(s => s.examId === activeExam?.id);
-    let csv = "Ogrenci,Okul No,Cihaz ID,Puan,Tarih\n";
-    examSubs.forEach(s => { csv += `${s.studentName},${s.studentNumber},${s.deviceId},${Number(s.score).toFixed(1)},${s.submittedAt}\n`; });
+    let csv = "Ogrenci,Okul No,Cihaz ID,Puan,Tarih,Kural Ihlali\n";
+    examSubs.forEach(s => { csv += `${s.studentName},${s.studentNumber},${s.deviceId},${Number(s.score).toFixed(1)},${s.submittedAt},${s.cheatWarnings || 0}\n`; });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = "Katilimci_Listesi.csv"; a.click();
@@ -566,7 +613,7 @@ const App = () => {
                       
                       <div className="grid grid-cols-2 gap-2 text-center mb-6 sm:mb-8">
                         <div className="bg-slate-50 p-2 rounded-xl sm:rounded-2xl border border-slate-100"><p className="text-[7px] sm:text-[8px] font-black text-slate-400 uppercase">Soru</p><p className="font-black text-sm sm:text-base text-slate-700">{exam.questions?.length || 0}</p></div>
-                        <div className="bg-green-50 p-2 rounded-xl sm:rounded-2xl border border-green-100"><p className="text-[7px] sm:text-[8px] font-black text-green-600 uppercase">Ort.</p><p className="font-black text-sm sm:text-base text-green-700">%{avg}</p></div>
+                        <div className="bg-green-50 p-2 rounded-xl sm:rounded-2xl border border-green-100"><p className="text-[7px] sm:text-[8px] font-black text-green-600 uppercase">Ort. Puan</p><p className="font-black text-sm sm:text-base text-green-700">{avg}</p></div>
                       </div>
                       <div className="w-full py-3 sm:py-4 bg-slate-900 text-white rounded-xl sm:rounded-2xl text-center font-black text-[10px] sm:text-xs uppercase tracking-widest hover:bg-indigo-600 transition-colors">Analizi Gör</div>
                     </button>
@@ -686,7 +733,7 @@ const App = () => {
           </div>
         )}
 
-        {/* --- YENİ: ÖĞRETMEN ANALİZ PANELİ (Cevap Kağıtları PDF Çıktısına Eklendi) --- */}
+        {/* --- YÖNETİCİ ANALİZ PANELİ --- */}
         {view === 'analytics' && activeExam && (
           <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
@@ -705,22 +752,23 @@ const App = () => {
                     <div className="bg-indigo-600 rounded-2xl sm:rounded-[4rem] p-8 sm:p-10 text-white text-center shadow-lg sm:shadow-2xl relative overflow-hidden break-inside-avoid">
                         <div className="absolute top-0 right-0 p-4 opacity-10"><IconTarget size={100}/></div>
                         <p className="text-[9px] sm:text-[10px] font-black uppercase opacity-70 mb-2 sm:mb-4 tracking-widest relative z-10">Sınıf Ortalaması</p>
-                        <p className="text-6xl sm:text-8xl font-black tracking-tighter relative z-10">%{ (submissions.filter(s=>s.examId===activeExam.id).reduce((a,b)=>a+(Number(b?.score)||0),0)/(submissions.filter(s=>s.examId===activeExam.id).length||1)).toFixed(1) }</p>
+                        <p className="text-6xl sm:text-8xl font-black tracking-tighter relative z-10">{ (submissions.filter(s=>s.examId===activeExam.id).reduce((a,b)=>a+(Number(b?.score)||0),0)/(submissions.filter(s=>s.examId===activeExam.id).length||1)).toFixed(1) }</p>
                     </div>
                  </div>
                  <div className="md:col-span-8 bg-white rounded-2xl sm:rounded-[4rem] shadow-sm border border-slate-100 overflow-hidden flex flex-col">
                     <div className="p-5 sm:p-8 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0"><h3 className="font-black text-lg sm:text-xl uppercase tracking-tighter text-slate-800 flex items-center gap-2"><IconUser size={20} className="text-indigo-500"/> Katılımcı Listesi</h3><span className="text-[9px] sm:text-[10px] font-black bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1 sm:py-1.5 rounded-md sm:rounded-full uppercase tracking-widest border border-indigo-100">{submissions.filter(s=>s.examId===activeExam.id).length} Kişi</span></div>
                     <div className="overflow-x-auto flex-1">
                         <table className="w-full text-left whitespace-nowrap min-w-[600px]">
-                            <thead className="bg-slate-50 border-b uppercase text-[8px] sm:text-[10px] font-black text-slate-400 tracking-widest"><tr><th className="p-4 sm:p-6 font-bold">Öğrenci Bilgileri</th><th className="p-4 sm:p-6 text-center font-bold">Doğru / Toplam</th><th className="p-4 sm:p-6 text-center font-bold">Başarı Oranı</th><th className="p-4 sm:p-6 text-center font-bold text-slate-300">Sistem ID</th></tr></thead>
+                            <thead className="bg-slate-50 border-b uppercase text-[8px] sm:text-[10px] font-black text-slate-400 tracking-widest"><tr><th className="p-4 sm:p-6 font-bold">Öğrenci Bilgileri</th><th className="p-4 sm:p-6 text-center font-bold">Doğru / Toplam</th><th className="p-4 sm:p-6 text-center font-bold">Puan</th><th className="p-4 sm:p-6 text-center font-bold text-red-400">İhlal</th><th className="p-4 sm:p-6 text-center font-bold">Tarih / Saat</th></tr></thead>
                             <tbody className="divide-y divide-slate-100 font-bold sm:font-black text-slate-800">
-                                {submissions.filter(s=>s.examId===activeExam.id).length === 0 && <tr><td colSpan="4" className="p-10 text-center text-slate-300 text-sm">Henüz sınava giren öğrenci yok.</td></tr>}
+                                {submissions.filter(s=>s.examId===activeExam.id).length === 0 && <tr><td colSpan="5" className="p-10 text-center text-slate-300 text-sm">Henüz sınava giren öğrenci yok.</td></tr>}
                                 {submissions.filter(s=>s.examId===activeExam.id).map((sub, i) => (
                                     <tr key={i} className="hover:bg-indigo-50/30 transition-colors">
                                         <td className="p-4 sm:p-6"><div className="text-base sm:text-xl tracking-tight uppercase text-indigo-900 mb-0.5">{sub.studentName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Numara: {sub.studentNumber}</div></td>
                                         <td className="p-4 sm:p-6 text-center text-slate-500 font-mono text-sm sm:text-base">{sub.correctCount} <span className="text-slate-300">/</span> {sub.totalQuestions}</td>
-                                        <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 sm:px-5 py-1 sm:py-1.5 bg-white border-2 sm:border-4 rounded-full text-xs sm:text-sm shadow-sm font-black " + (Number(sub.score) >= 50 ? 'border-green-100 text-green-600' : 'border-red-100 text-red-500')}>%{Number(sub.score).toFixed(1)}</span></td>
-                                        <td className="p-4 sm:p-6 text-center text-[7px] sm:text-[8px] text-slate-300 font-mono flex flex-col items-center justify-center gap-1 opacity-50"><IconSmartphone size={12}/>{sub.deviceId}</td>
+                                        <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 sm:px-5 py-1 sm:py-1.5 bg-white border-2 sm:border-4 rounded-full text-xs sm:text-sm shadow-sm font-black " + (Number(sub.score) >= 50 ? 'border-green-100 text-green-600' : 'border-red-100 text-red-500')}>{Number(sub.score).toFixed(0)}</span></td>
+                                        <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 py-1 bg-white border rounded-full text-xs font-black " + ((sub.cheatWarnings || 0) > 0 ? 'border-red-200 text-red-600' : 'border-slate-100 text-slate-300')}>{sub.cheatWarnings || 0} Kez</span></td>
+                                        <td className="p-4 sm:p-6 text-center text-xs sm:text-sm text-slate-500 font-bold">{sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '-'}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -729,7 +777,6 @@ const App = () => {
                  </div>
               </div>
 
-              {/* YENİ: PDF İÇİN DETAYLI ÖĞRENCİ CEVAP KAĞITLARI BÖLÜMÜ */}
               {submissions.filter(s=>s.examId===activeExam.id).length > 0 && (
                   <div className="pt-12 sm:pt-16 mt-8 sm:mt-12 border-t-2 border-dashed border-slate-200">
                       <h3 className="font-black text-2xl sm:text-3xl uppercase tracking-tighter text-slate-800 mb-8 sm:mb-10 text-center print:text-left print:mt-10">Öğrenci Cevap Kağıtları</h3>
@@ -739,7 +786,7 @@ const App = () => {
                                   <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b-2 border-slate-50 pb-4 sm:pb-6 mb-6 sm:mb-8 gap-4 sm:gap-0">
                                       <div>
                                           <h4 className="font-black text-xl sm:text-2xl text-indigo-900 uppercase tracking-tight">{sub.studentName}</h4>
-                                          <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Öğrenci No: {sub.studentNumber} • BAŞARI: %{Number(sub.score).toFixed(1)}</p>
+                                          <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mt-1 flex flex-wrap items-center gap-1">Öğrenci No: {sub.studentNumber} • PUAN: {Number(sub.score).toFixed(0)} • KURAL İHLALİ: {sub.cheatWarnings || 0} • TARİH: {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '-'}</p>
                                       </div>
                                       <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
                                           <p className="text-xs sm:text-sm font-black text-slate-700">{sub.correctCount} Doğru <span className="text-slate-300 mx-1">/</span> {sub.totalQuestions} Soru</p>
@@ -773,7 +820,7 @@ const App = () => {
           </div>
         )}
 
-        {/* KOD İLE GİRİŞ EKRANI */}
+        {/* --- ÖĞRENCİ KOD GİRİŞ EKRANI --- */}
         {view === 'student' && (
           <div className="max-w-lg mx-auto py-6 sm:py-12 animate-in fade-in zoom-in duration-500 no-print px-4">
              <div className="bg-white p-8 sm:p-12 md:p-16 rounded-3xl sm:rounded-[4rem] shadow-xl sm:shadow-2xl border border-slate-100 text-center relative overflow-hidden">
@@ -799,7 +846,7 @@ const App = () => {
           </div>
         )}
 
-        {/* --- YENİ: ÖĞRENCİ SINAV SONUÇ / KARNE EKRANI --- */}
+        {/* --- ÖĞRENCİ SINAV SONUÇ / KARNE EKRANI --- */}
         {view === 'result' && examResult && (
           <div className="max-w-3xl mx-auto py-6 sm:py-12 animate-in slide-in-from-bottom-8 no-print px-4">
              <div className="bg-white p-8 sm:p-16 rounded-3xl sm:rounded-[4rem] shadow-xl sm:shadow-2xl border border-slate-100 text-center relative overflow-hidden">
@@ -809,8 +856,8 @@ const App = () => {
                 
                 <div className="flex justify-center mb-12">
                    <div className={"w-40 h-40 sm:w-48 sm:h-48 rounded-[3rem] flex flex-col items-center justify-center shadow-inner border-8 " + (examResult.score >= 50 ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-600')}>
-                      <span className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">BAŞARI</span>
-                      <span className="text-5xl sm:text-6xl font-black tracking-tighter">%{examResult.score.toFixed(0)}</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">PUAN</span>
+                      <span className="text-5xl sm:text-6xl font-black tracking-tighter">{examResult.score.toFixed(0)}</span>
                    </div>
                 </div>
 
@@ -847,14 +894,19 @@ const App = () => {
           </div>
         )}
 
+        {/* --- YENİ: KOPYA KORUMALI AKTİF SINAV EKRANI --- */}
         {view === 'exam' && activeExam && (
-          <div className="max-w-4xl mx-auto pb-20 sm:pb-32 animate-in slide-in-from-right no-print">
+          <div 
+            className="max-w-4xl mx-auto pb-20 sm:pb-32 animate-in slide-in-from-right no-print select-none"
+            onCopy={(e) => { e.preventDefault(); showModal("Yasak", "Sınavda kopyalama işlemi kural ihlalidir.", "error"); }}
+            onPaste={(e) => { e.preventDefault(); showModal("Yasak", "Sınavda yapıştırma işlemi kural ihlalidir.", "error"); }}
+            onContextMenu={(e) => e.preventDefault()}
+          >
              <div className="bg-slate-900 text-white p-6 sm:p-12 rounded-t-3xl sm:rounded-t-[5rem] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 sm:gap-0 sticky top-0 sm:top-20 z-40 shadow-2xl border-b-4 border-indigo-500/30">
                 <div>
                     <h2 className="text-xl sm:text-3xl font-black uppercase tracking-tight leading-tight text-indigo-300 mb-2">{activeExam.title}</h2>
                     <div className="flex items-center gap-3"><div className="w-6 h-6 sm:w-8 sm:h-8 bg-white/10 rounded-full flex items-center justify-center"><IconUser size={12}/></div><p className="text-slate-300 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">{studentName} <span className="opacity-50 mx-1">|</span> {studentNumber}</p></div>
                 </div>
-                {/* YENİ: Süre boyutu daha küçük ve zarif hale getirildi */}
                 <div className={"w-full sm:w-auto flex justify-center sm:justify-start px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-2xl font-mono text-xl sm:text-2xl bg-black/40 items-center gap-2 sm:gap-3 border border-white/10 transition-colors shadow-inner " + (timeLeft < 60 ? 'text-red-400 bg-red-900/20 border-red-500/50 animate-pulse' : 'text-white')}><IconClock size={20} className="opacity-50" /> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
              </div>
              <div className="bg-white p-6 sm:p-10 md:p-16 rounded-b-3xl sm:rounded-b-[5rem] shadow-xl sm:shadow-2xl space-y-16 sm:space-y-24 border-x border-b border-slate-200">
@@ -884,7 +936,7 @@ const App = () => {
                 
                 <div className="flex flex-col items-center gap-4 sm:gap-6 pt-10 sm:pt-16 border-t-2 border-dashed border-slate-200">
                     <button type="button" onClick={handleFinishExam} className="w-full sm:w-auto bg-indigo-600 text-white px-8 sm:px-20 py-4 sm:py-6 rounded-2xl sm:rounded-[3rem] font-black text-lg sm:text-2xl shadow-xl sm:shadow-2xl hover:bg-indigo-700 hover:shadow-indigo-500/30 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 uppercase tracking-tighter border-b-4 sm:border-b-8 border-indigo-800"><IconSend size={24} className="sm:w-8 sm:h-8" /> <span className="mt-0.5">Sınavı Bitir</span></button>
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[8px] sm:text-[9px] flex items-center gap-1.5"><IconLock size={10}/> Yanıtlarınız bulut sistemine şifrelenerek kaydedilecektir.</p>
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[8px] sm:text-[9px] flex items-center gap-1.5"><IconLock size={10}/> Sınav esnasında başka sekmeye geçmek veya soruları kopyalamak yasaktır.</p>
                 </div>
              </div>
           </div>
