@@ -328,7 +328,6 @@ const App = () => {
     }));
   };
 
-  // YENİ: Dosya İşleme (Seçme ve Yapıştırma için ortak fonksiyon)
   const processFile = (file) => {
       const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
       if (!allowedTypes.includes(file.type)) { 
@@ -354,7 +353,6 @@ const App = () => {
       processFile(file);
   };
 
-  // YENİ: Panodan Resim Yapıştırma (Ctrl+V) Desteği
   useEffect(() => {
       if (view !== 'create' || !isTeacher) return;
 
@@ -387,6 +385,9 @@ const App = () => {
     try {
       const typeStr = aiConfig.types.join(", ");
       let instruction = `Sen profesyonel bir sınav hazırlayıcısın. Görevin verilen metinden veya ekli dosyadan tam olarak ${aiConfig.count} adet soru üretmektir. İstenilen soru türleri: ${typeStr}.`;
+
+      // YENİ KURAL: Yapay zekanın dili zorla Türkçeye çevirmesini engeller.
+      instruction += `\nÖNEMLİ KURAL: Ekli dosyanın veya metnin orijinal dilini (İngilizce, Almanca, Türkçe vb.) tespit et ve soruları KESİNLİKLE METNİN ORİJİNAL DİLİNDE HAZIRLA. Metin İngilizce ise sorular ve şıklar İngilizce olmalı. Asla çeviri yapma!`;
 
       if (uploadData && uploadType === 'application/pdf' && pageRange.trim()) { 
           instruction += `\nÖNEMLİ DİKKAT: Ekli PDF dosyasının SADECE şu sayfalarındaki veya şu kısımlarındaki bilgileri kullanarak soru üret: "${pageRange}"`; 
