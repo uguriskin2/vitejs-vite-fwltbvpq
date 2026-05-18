@@ -30,6 +30,7 @@ const IconSend = ({size=40, className=""}) => <svg className={className} width={
 const IconActivity = ({size=64, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
 const IconActivitySmall = ({size=32, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
 const IconFileText = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
+const IconImage = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
 
 // --- Firebase Yapılandırması ---
 const firebaseConfig = {
@@ -111,8 +112,10 @@ const App = () => {
   const [aiText, setAiText] = useState('');
   const [aiConfig, setAiConfig] = useState({ count: 10, types: ['multiple-choice'] });
 
-  const [pdfFile, setPdfFile] = useState(null);
-  const [pdfName, setPdfName] = useState('');
+  // YENİ: PDF'in yanında Resim dosyalarını da destekleyen Upload State'leri
+  const [uploadData, setUploadData] = useState(null);
+  const [uploadName, setUploadName] = useState('');
+  const [uploadType, setUploadType] = useState('');
   const [pageRange, setPageRange] = useState('');
 
   const [currentQuestion, setCurrentQuestion] = useState(getInitialQuestion());
@@ -203,8 +206,8 @@ const App = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cheatWarnings]);
 
-  // --- API BAĞLANTISI ---
-  async function callGemini(prompt, systemInstruction = "", pdfBase64 = null) {
+  // --- API BAĞLANTISI (YENİ: Resim (Image) Desteği Eklendi) ---
+  async function callGemini(prompt, systemInstruction = "", fileBase64 = null, mimeType = null) {
     const currentKey = geminiKey ? geminiKey.trim() : "";
     if (!currentKey) throw new Error("Lütfen 'AI Sihirbazı' panelindeki kutucuğa Google Gemini API Anahtarınızı girin.");
     if (currentKey === firebaseConfig.apiKey) throw new Error("DİKKAT: Kutucuğa yapay zeka yerine FIREBASE şifrenizi girdiniz! Lütfen aistudio.google.com adresinden YENİ bir anahtar alıp kutucuğa yapıştırın.");
@@ -215,12 +218,12 @@ const App = () => {
     for (const model of modelsToTry) {
         try {
             const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
-            const combinedText = `SİSTEM YÖNERGESİ:\n${systemInstruction}\n\nKULLANICI TALEBİ:\n${prompt || "Ekli belgeye veya metne göre soru üret."}`;
+            const combinedText = `SİSTEM YÖNERGESİ:\n${systemInstruction}\n\nKULLANICI TALEBİ:\n${prompt || "Ekli dosya veya metne göre soru üret."}`;
             const parts = [{ text: combinedText }];
 
-            if (pdfBase64) {
-                const base64Data = pdfBase64.split(',')[1];
-                parts.push({ inlineData: { mimeType: "application/pdf", data: base64Data } });
+            if (fileBase64 && mimeType) {
+                const base64Data = fileBase64.split(',')[1];
+                parts.push({ inlineData: { mimeType: mimeType, data: base64Data } });
             }
 
             const payload = { 
@@ -285,7 +288,7 @@ const App = () => {
     if (view === 'exam' && timeLeft > 0) {
       timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     } else if (view === 'exam' && timeLeft === 0) {
-      handleFinishExam(true); // Süre bittiğinde zorunlu bitir
+      handleFinishExam(true); 
     }
     return () => clearInterval(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -331,31 +334,48 @@ const App = () => {
     }));
   };
 
+  // YENİ: Dosya Yükleme - Resim formatlarını (PNG, JPG) dahil etme
   const handleFileUpload = (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      if (file.type !== 'application/pdf') { showModal("Hata", "Lütfen sadece PDF dosyası yükleyin.", "error"); return; }
-      if (file.size > 5 * 1024 * 1024) { showModal("Hata", "Dosya boyutu çok büyük. Lütfen en fazla 5MB olan bir PDF seçin.", "error"); return; }
-      setPdfName(file.name);
+      
+      const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+      if (!allowedTypes.includes(file.type)) { 
+          showModal("Hata", "Lütfen sadece PDF veya Resim (PNG, JPG) dosyası yükleyin.", "error"); 
+          return; 
+      }
+      
+      if (file.size > 5 * 1024 * 1024) { 
+          showModal("Hata", "Dosya boyutu çok büyük. Lütfen en fazla 5MB olan bir dosya seçin.", "error"); 
+          return; 
+      }
+      
+      setUploadName(file.name);
+      setUploadType(file.type);
       const reader = new FileReader();
-      reader.onloadend = () => { setPdfFile(reader.result); };
+      reader.onloadend = () => { setUploadData(reader.result); };
       reader.readAsDataURL(file);
   };
 
   const generateWithAI = async () => {
     if (!geminiKey || geminiKey.trim() === "") { showModal("API Anahtarı Eksik", "Lütfen AI Sihirbazı panelindeki kutucuğa Google Gemini API Anahtarınızı girin.", "error"); return; }
-    if (!aiText.trim() && !pdfFile) { showModal("Eksik", "Lütfen metin girin veya bir PDF dosyası yükleyin.", "error"); return; }
+    if (!aiText.trim() && !uploadData) { showModal("Eksik", "Lütfen metin girin veya bir belge/resim yükleyin.", "error"); return; }
     
     setAiProcessing(true);
     try {
       const typeStr = aiConfig.types.join(", ");
-      let instruction = `Sen profesyonel bir sınav hazırlayıcısın. Görevin verilen metinden veya ekli PDF belgesinden tam olarak ${aiConfig.count} adet soru üretmektir. İstenilen soru türleri: ${typeStr}.`;
+      let instruction = `Sen profesyonel bir sınav hazırlayıcısın. Görevin verilen metinden veya ekli dosyadan tam olarak ${aiConfig.count} adet soru üretmektir. İstenilen soru türleri: ${typeStr}.`;
 
-      if (pdfFile && pageRange.trim()) { instruction += `\nÖNEMLİ DİKKAT: Ekli PDF dosyasının SADECE şu sayfalarındaki veya şu kısımlarındaki bilgileri kullanarak soru üret: "${pageRange}"`; }
+      if (uploadData && uploadType === 'application/pdf' && pageRange.trim()) { 
+          instruction += `\nÖNEMLİ DİKKAT: Ekli PDF dosyasının SADECE şu sayfalarındaki veya şu kısımlarındaki bilgileri kullanarak soru üret: "${pageRange}"`; 
+      }
+      if (uploadData && uploadType.startsWith('image/')) {
+          instruction += `\nÖNEMLİ DİKKAT: Lütfen ekli görseli (fotoğrafı) analiz ederek içindeki metin, grafik veya olaylara uygun, eğitim müfredatına uyan kaliteli sorular üret.`;
+      }
 
       instruction += `\nYanıt SADECE VE SADECE geçerli bir JSON dizisi olmalıdır. JSON formatı dışında başında veya sonunda hiçbir metin, markdown (\`\`\`json) veya açıklama ekleme. JSON içindeki anahtarlar ve değerler mutlaka ÇİFT TIRNAK (") ile sarılmalıdır. Soru metni içinde tırnak işareti kullanman gerekirse mutlaka tek tırnak (') kullan, çift tırnak kullanma. Kesinlikle sondaki elemandan sonra fazladan virgül koyma. Format Örneği: [{"text": "Soru metni", "topic": "Konu", "type": "multiple-choice", "options": ["A", "B", "C", "D"], "correct": 0, "correctText": "", "pairs": [{"left": "Terim", "right": "Açıklama"}]}]`;
       
-      const res = await callGemini(aiText, instruction, pdfFile);
+      const res = await callGemini(aiText, instruction, uploadData, uploadType);
       
       const cleanRes = res.replace(/```json/gi, '').replace(/```/g, '').trim();
       const jsonMatch = cleanRes.match(/\[[\s\S]*\]/);
@@ -365,7 +385,7 @@ const App = () => {
       try {
           const questions = JSON.parse(jsonMatch[0]);
           setNewExam(prev => ({ ...prev, questions: [...(prev.questions || []), ...questions] }));
-          setAiText(''); setPdfFile(null); setPdfName(''); setPageRange('');
+          setAiText(''); setUploadData(null); setUploadName(''); setUploadType(''); setPageRange('');
       } catch (parseError) {
           throw new Error("Yapay zeka soruları yazarken noktalama kurallarına uymadı (Format Hatası). Lütfen 'Oluştur' butonuna tekrar basın.");
       }
@@ -379,7 +399,7 @@ const App = () => {
                  { text: "Aşağıdaki tarihleri önemli olaylarla eşleştirin:", topic: "Tarih", type: "matching", options: ['', '', '', ''], correct: 0, correctText: "", pairs: [{left: "1923", right: "Cumhuriyetin İlanı"}, {left: "1920", right: "TBMM'nin Açılışı"}, {left: "1453", right: "İstanbul'un Fethi"}] }
              ];
              setNewExam(prev => ({ ...prev, questions: [...(prev.questions || []), ...demoQuestions] }));
-             setAiText(''); setPdfFile(null); setPdfName(''); setPageRange('');
+             setAiText(''); setUploadData(null); setUploadName(''); setUploadType(''); setPageRange('');
              showModal("🚀 Örnek Sorular Yüklendi", "Sistem çalışıyor ancak girdiğiniz Google API şifresi şu an yetkisiz olduğu için gerçek yapay zeka bağlantısı kurulamadı.\n\nSistemi test edebilmeniz için taslağınıza otomatik olarak 'Örnek Sorular' eklendi. Sınavı yayınlayıp test edebilirsiniz!", "success");
         } else { showModal("Hata Oluştu", e.message || "Bilinmeyen bir hata oluştu.", "error"); }
     }
@@ -452,12 +472,10 @@ const App = () => {
     setView('exam');
   };
 
-  // YENİ: Boş soru kontrolü destekli bitirme fonksiyonu
   const handleFinishExam = async (forceParam) => {
     if (!activeExam) return;
-    const isForced = forceParam === true; // Parametre true ise veya süre bittiyse zorla bitir
+    const isForced = forceParam === true; 
     
-    // Boş bırakılan soruları kontrol et
     const unanswered = [];
     (activeExam.questions || []).forEach((q, idx) => {
         const ans = answers[idx];
@@ -555,7 +573,6 @@ const App = () => {
         }
     };
 
-    // Zorunlu değilse ve boş soru varsa önce kullanıcıyı uyar
     if (!isForced && unanswered.length > 0) {
         showModal(
             "Cevapsız Sorularınız Var!", 
@@ -564,12 +581,10 @@ const App = () => {
             submitData
         );
     } else {
-        // Eksik yoksa veya süre bittiyse direkt kaydet
         submitData();
     }
   };
 
-  // --- SİLME İŞLEMLERİ ---
   const handleDeleteSubmission = (subId) => {
     showModal("Sonucu Sil", "Bu öğrencinin sınav sonucunu kalıcı olarak silmek istediğinize emin misiniz?", "confirm", async () => {
       try {
@@ -620,7 +635,6 @@ const App = () => {
     });
   };
 
-  // --- YAZDIRMA (PDF) ---
   const handlePrint = () => {
     const content = document.getElementById('report-content');
     if (!content) return;
@@ -709,7 +723,7 @@ const App = () => {
         </div>
       )}
 
-      {aiProcessing && <div className="fixed inset-0 bg-indigo-900/40 backdrop-blur-sm z-[200] flex flex-col items-center justify-center text-white print:hidden"><IconActivity size={64} className="animate-spin mb-4" /><p className="font-black uppercase tracking-widest text-center text-sm sm:text-base">PDF/METİN OKUNUYOR<br/>SORULAR ÜRETİLİYOR...</p></div>}
+      {aiProcessing && <div className="fixed inset-0 bg-indigo-900/40 backdrop-blur-sm z-[200] flex flex-col items-center justify-center text-white print:hidden"><IconActivity size={64} className="animate-spin mb-4" /><p className="font-black uppercase tracking-widest text-center text-sm sm:text-base">DOSYA OKUNUYOR<br/>SORULAR ÜRETİLİYOR...</p></div>}
 
       <nav className="bg-white border-b border-slate-200 p-4 sticky top-0 z-50 flex justify-between items-center shadow-sm print:hidden">
         <div className="flex items-center gap-2 font-black text-xl sm:text-2xl text-indigo-600 cursor-pointer" onClick={() => { setView('landing'); setExamResult(null); }}>
@@ -746,9 +760,8 @@ const App = () => {
       <main className="max-w-6xl w-full mx-auto p-4 md:p-8 flex-1">
         {view === 'landing' && (
           <div className="text-center py-10 sm:py-20 animate-in fade-in zoom-in print:hidden px-4">
-            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] sm:leading-[0.9] tracking-tighter uppercase text-slate-900">HİSAR AİHL <br/><span className="text-indigo-600 underline decoration-indigo-200 decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8 mt-2 inline-block">Akıllı Sınav</span></h2>
-            <h3 className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-1">Başarılar Dilerim <br/></h3>
-            <h3 className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-1">Uğur ISKIN Bilgisayar Öğretmeni <br/></h3>
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] sm:leading-[0.9] tracking-tighter uppercase text-slate-900">Bulut Tabanlı <br/><span className="text-indigo-600 underline decoration-indigo-200 decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8 mt-2 inline-block">Akıllı Sınav</span></h2>
+            <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-4">Öğrencileriniz için hesap gerekmez. Sınavları AI ile hazırlayın, özel sınav koduyla güvenle paylaşın.</p>
             <button type="button" onClick={() => setView('student')} className="bg-indigo-600 text-white px-8 sm:px-12 py-4 sm:py-6 rounded-full sm:rounded-[3rem] font-black text-lg sm:text-2xl hover:scale-105 active:scale-95 transition-all shadow-xl sm:shadow-2xl flex items-center justify-center gap-3 sm:gap-4 mx-auto w-full sm:w-auto max-w-sm shadow-indigo-200"><IconUser size={28}/> SINAVA BAŞLA</button>
           </div>
         )}
@@ -828,23 +841,28 @@ const App = () => {
                      <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
                         <div className="bg-white/5 p-4 sm:p-5 rounded-xl sm:rounded-3xl border border-white/10">
                             <div className="flex items-center justify-between mb-3 sm:mb-4">
-                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-indigo-200">PDF DOSYASINDAN ÜRET (OPSİYONEL)</span>
-                                {pdfFile && <button type="button" onClick={()=>{setPdfFile(null);setPdfName('');setPageRange('');}} className="text-red-400 hover:text-red-300 text-xs font-bold transition-colors"><IconTrash2 size={16}/></button>}
+                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-indigo-200">PDF / RESİM DOSYASINDAN ÜRET (OPSİYONEL)</span>
+                                {uploadData && <button type="button" onClick={()=>{setUploadData(null);setUploadName('');setUploadType('');setPageRange('');}} className="text-red-400 hover:text-red-300 text-xs font-bold transition-colors"><IconTrash2 size={16}/></button>}
                             </div>
                             
-                            {!pdfFile ? (
+                            {!uploadData ? (
                                 <label className="flex flex-col items-center justify-center w-full h-20 sm:h-24 border-2 border-dashed border-indigo-300/30 rounded-xl sm:rounded-2xl cursor-pointer hover:bg-white/10 transition-all">
-                                    <IconFileText size={20} />
-                                    <span className="text-indigo-200 font-bold text-[10px] sm:text-xs uppercase tracking-widest mt-1 sm:mt-2">PDF SEÇ VEYA SÜRÜKLE</span>
-                                    <input type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
+                                    <div className="flex gap-2 text-indigo-200 mb-1 sm:mb-2">
+                                        <IconFileText size={20} />
+                                        <IconImage size={20} />
+                                    </div>
+                                    <span className="text-indigo-200 font-bold text-[10px] sm:text-xs uppercase tracking-widest mt-1 sm:mt-2">PDF VEYA RESİM SEÇ / SÜRÜKLE</span>
+                                    <input type="file" accept=".pdf,image/png,image/jpeg,image/jpg" className="hidden" onChange={handleFileUpload} />
                                 </label>
                             ) : (
                                 <div className="space-y-2 sm:space-y-3">
                                     <div className="flex items-center gap-2 sm:gap-3 text-green-300 font-bold text-xs sm:text-sm bg-green-900/40 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-green-500/30">
                                         <IconCheckCircle size={16} />
-                                        <span className="truncate">{pdfName}</span>
+                                        <span className="truncate">{uploadName}</span>
                                     </div>
-                                    <input type="text" placeholder="Hangi sayfalar? (Örn: Sadece 12-15 arası)" value={pageRange} onChange={e=>setPageRange(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-lg sm:rounded-xl p-3 sm:p-4 outline-none text-xs sm:text-sm placeholder:text-white/40 text-white focus:border-indigo-400 transition-colors" />
+                                    {uploadType === 'application/pdf' && (
+                                        <input type="text" placeholder="Hangi sayfalar? (Örn: Sadece 12-15 arası)" value={pageRange} onChange={e=>setPageRange(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-lg sm:rounded-xl p-3 sm:p-4 outline-none text-xs sm:text-sm placeholder:text-white/40 text-white focus:border-indigo-400 transition-colors" />
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -855,10 +873,10 @@ const App = () => {
                             <div className="h-px bg-white flex-1"></div>
                         </div>
 
-                        <textarea className="w-full h-24 sm:h-28 bg-white/5 border border-white/10 rounded-xl sm:rounded-3xl p-4 sm:p-6 outline-none text-xs sm:text-sm shadow-inner placeholder:text-white/30 custom-scrollbar focus:border-indigo-400 transition-colors" placeholder="PDF yüklemek yerine ders notunu buraya da yapıştırabilirsiniz..." value={aiText} onChange={e=>setAiText(e.target.value)} />
+                        <textarea className="w-full h-24 sm:h-28 bg-white/5 border border-white/10 rounded-xl sm:rounded-3xl p-4 sm:p-6 outline-none text-xs sm:text-sm shadow-inner placeholder:text-white/30 custom-scrollbar focus:border-indigo-400 transition-colors" placeholder="Ders notunu buraya yapıştırabilirsiniz..." value={aiText} onChange={e=>setAiText(e.target.value)} />
                      </div>
 
-                     <button type="button" onClick={generateWithAI} disabled={aiProcessing || (!aiText.trim() && !pdfFile)} className="w-full py-4 sm:py-5 bg-white text-indigo-900 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-lg shadow-xl hover:shadow-2xl disabled:opacity-50 hover:bg-indigo-50 active:scale-95 transition-all flex items-center justify-center gap-2"><IconTarget size={20}/> SORULARI OLUŞTUR</button>
+                     <button type="button" onClick={generateWithAI} disabled={aiProcessing || (!aiText.trim() && !uploadData)} className="w-full py-4 sm:py-5 bg-white text-indigo-900 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-lg shadow-xl hover:shadow-2xl disabled:opacity-50 hover:bg-indigo-50 active:scale-95 transition-all flex items-center justify-center gap-2"><IconTarget size={20}/> SORULARI OLUŞTUR</button>
                   </div>
 
                   <div className={"p-6 sm:p-10 rounded-2xl sm:rounded-[3rem] space-y-6 sm:space-y-8 border shadow-inner transition-colors " + (editingQIdx !== null ? 'bg-indigo-50 border-indigo-200' : 'bg-slate-50 border-slate-200')}>
