@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, collection, addDoc, onSnapshot, 
-  doc, deleteDoc, serverTimestamp 
+  doc, deleteDoc, serverTimestamp, updateDoc 
 } from 'firebase/firestore';
 import { 
   getAuth, signInAnonymously, onAuthStateChanged 
@@ -16,6 +16,7 @@ const IconUser = ({size=24, className=""}) => <svg className={className} width={
 const IconPlusCircle = ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>;
 const IconLink = ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
 const IconTrash2 = ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+const IconEdit = ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
 const IconChevronLeft = ({size=32, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>;
 const IconChevronRight = ({size=32, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>;
 const IconDownload = ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
@@ -115,6 +116,7 @@ const App = () => {
   const [pageRange, setPageRange] = useState('');
 
   const [currentQuestion, setCurrentQuestion] = useState(getInitialQuestion());
+  const [editingQIdx, setEditingQIdx] = useState(null); // YENİ: Hangi sorunun düzenlendiğini takip eder
   const [activeExam, setActiveExam] = useState(null);
   
   const [studentName, setStudentName] = useState('');
@@ -152,7 +154,7 @@ const App = () => {
     } catch (e) {}
   }, []);
 
-  // --- KOPYA KORUMA DİNLEYİCİSİ (Sadece sınav esnasında çalışır) ---
+  // --- KOPYA KORUMA DİNLEYİCİSİ ---
   useEffect(() => {
       const handleAway = () => {
           if (view === 'exam' && !isAway.current) {
@@ -314,6 +316,14 @@ const App = () => {
     document.body.removeChild(textArea);
   };
 
+  // YENİ: Sınav Düzenleme Fonksiyonu
+  const handleEditExam = (exam) => {
+    setNewExam(exam); // Sınav verilerini form durumuna aktar (id dahil)
+    setCurrentQuestion(getInitialQuestion()); // Soru editörünü temizle
+    setEditingQIdx(null); // Soru seçimini sıfırla
+    setView('create'); // Düzenleme ekranına geç
+  };
+
   const toggleAiType = (type) => {
     setAiConfig(prev => ({
       ...prev,
@@ -376,10 +386,23 @@ const App = () => {
     finally { setAiProcessing(false); }
   };
 
+  // YENİ: Soru Ekleme / Güncelleme (Düzenleme Desteği Eklendi)
   const handleAddQuestion = () => {
     if (!currentQuestion.text) return;
-    setNewExam(prev => ({ ...prev, questions: [...(prev.questions || []), { ...currentQuestion, topic: currentQuestion.topic?.trim() || "Genel" }] }));
-    setCurrentQuestion(getInitialQuestion());
+    
+    const formattedQuestion = { ...currentQuestion, topic: currentQuestion.topic?.trim() || "Genel" };
+
+    if (editingQIdx !== null) {
+        // Var olan soruyu güncelle
+        const updatedQuestions = [...newExam.questions];
+        updatedQuestions[editingQIdx] = formattedQuestion;
+        setNewExam(prev => ({ ...prev, questions: updatedQuestions }));
+        setEditingQIdx(null); // Güncelleme bittikten sonra edit modundan çık
+    } else {
+        // Yeni soru olarak sona ekle
+        setNewExam(prev => ({ ...prev, questions: [...(prev.questions || []), formattedQuestion] }));
+    }
+    setCurrentQuestion(getInitialQuestion()); // Editörü temizle
   };
 
   const handleSaveExam = async () => {
@@ -388,14 +411,25 @@ const App = () => {
         return;
     }
     try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'exams'), { ...newExam, createdAt: serverTimestamp(), userId: user.uid });
+      if (newExam.id) {
+          // YENİ: Önceden var olan sınavı Firebase'de güncelle
+          await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', newExam.id), {
+              title: newExam.title,
+              duration: newExam.duration,
+              examCode: newExam.examCode,
+              questions: newExam.questions
+          });
+          showModal("Başarılı", "Sınav değişiklikleri başarıyla kaydedildi.", "success");
+      } else {
+          // Yeni sınav oluştur
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'exams'), { ...newExam, createdAt: serverTimestamp(), userId: user.uid });
+          showModal("Başarılı", "Yeni sınav başarıyla oluşturuldu.", "success");
+      }
+      
       setNewExam({ title: '', duration: 30, examCode: '', questions: [] });
       setView('teacher');
     } catch (e) { 
-       showModal("Uyarı", "Bağlantı hatası: Sınav geçici belleğe kaydedildi.", "error"); 
-       setExams(prev => [...prev, {...newExam, id: Date.now().toString()}]);
-       setNewExam({ title: '', duration: 30, examCode: '', questions: [] });
-       setView('teacher');
+       showModal("Uyarı", "Bağlantı hatası: Sınav işleminiz gerçekleşmedi.", "error"); 
     }
   };
 
@@ -520,7 +554,7 @@ const App = () => {
     });
   };
 
-  // --- YAZDIRMA (PDF) DÜZELTİLDİ ---
+  // --- YAZDIRMA (PDF) ---
   const handlePrint = () => {
     const content = document.getElementById('report-content');
     if (!content) return;
@@ -623,7 +657,12 @@ const App = () => {
           {!isTeacher ? (
             <button type="button" onClick={() => setShowPassModal(true)} className="flex items-center gap-1 sm:gap-2 font-bold text-slate-500 hover:text-indigo-600 transition-colors text-xs sm:text-base"><IconLock size={16}/> <span className="hidden sm:inline">Panel</span></button>
           ) : (
-            <><button type="button" onClick={() => setView('teacher')} className="bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-base">Yönetim</button><button type="button" onClick={() => { setIsTeacher(false); setView('landing'); setExamResult(null); }} className="flex items-center gap-1 sm:gap-2 font-bold text-red-500 px-2 transition-colors hover:text-red-700 text-xs sm:text-base"><IconLogOut size={16}/> <span className="hidden sm:inline">Çıkış</span></button></>
+            <><button type="button" onClick={() => {
+                // YENİ: Yönetim paneline girerken editörü sıfırla
+                setNewExam({ title: '', duration: 30, examCode: '', questions: [] });
+                setEditingQIdx(null);
+                setView('teacher');
+            }} className="bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-base">Yönetim</button><button type="button" onClick={() => { setIsTeacher(false); setView('landing'); setExamResult(null); }} className="flex items-center gap-1 sm:gap-2 font-bold text-red-500 px-2 transition-colors hover:text-red-700 text-xs sm:text-base"><IconLogOut size={16}/> <span className="hidden sm:inline">Çıkış</span></button></>
           )}
           <button type="button" onClick={() => { setView('student'); setExamResult(null); }} className="bg-indigo-600 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl font-black shadow-xl hover:bg-indigo-700 transition-all text-xs sm:text-base">SINAVA GİR</button>
         </div>
@@ -652,7 +691,11 @@ const App = () => {
           <div className="space-y-6 sm:space-y-10 animate-in slide-in-from-bottom-8 print:hidden">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 sm:gap-0">
               <div><h2 className="text-2xl sm:text-4xl font-black text-slate-900 uppercase">Sınav Merkezi</h2><p className="text-indigo-600 font-bold uppercase text-[8px] sm:text-[10px] animate-pulse mt-1">PANEL AKTİF</p></div>
-              <button type="button" onClick={() => setView('create')} className="w-full sm:w-auto bg-green-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-[2rem] font-black flex items-center justify-center gap-2 shadow-lg sm:shadow-2xl hover:bg-green-700 transition-all text-sm sm:text-base"><IconPlusCircle size={20}/> YENİ SINAV</button>
+              <button type="button" onClick={() => {
+                  setNewExam({ title: '', duration: 30, examCode: '', questions: [] });
+                  setEditingQIdx(null);
+                  setView('create');
+              }} className="w-full sm:w-auto bg-green-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-[2rem] font-black flex items-center justify-center gap-2 shadow-lg sm:shadow-2xl hover:bg-green-700 transition-all text-sm sm:text-base"><IconPlusCircle size={20}/> YENİ SINAV</button>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
               {exams.length === 0 ? (
@@ -664,6 +707,8 @@ const App = () => {
                   <div key={exam.id} className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-[3rem] shadow-sm border border-slate-100 group relative hover:shadow-lg transition-all">
                     <div className="absolute top-0 right-0 p-3 sm:p-4 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all flex gap-1 sm:gap-2">
                        <button type="button" onClick={(e) => handleCopyLink(e, exam)} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-indigo-500 hover:bg-indigo-50" title="Kodu ve Linki Kopyala"><IconLink size={18}/></button>
+                       {/* YENİ: Sınav Düzenleme Butonu */}
+                       <button type="button" onClick={(e) => { e.stopPropagation(); handleEditExam(exam); }} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-blue-500 hover:bg-blue-50" title="Sınavı Düzenle"><IconEdit size={18}/></button>
                        <button type="button" onClick={(e) => { e.stopPropagation(); showModal("Sil", "Bu sınav kalıcı olarak silinecek. Emin misiniz?", "confirm", () => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id))); }} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-red-500 hover:bg-red-50" title="Sil"><IconTrash2 size={18}/></button>
                     </div>
                     <button type="button" onClick={() => { setActiveExam(exam); setView('analytics'); setSelectedSubs([]); }} className="text-left w-full h-full pt-8 lg:pt-0 pr-0 lg:pr-10">
@@ -687,7 +732,7 @@ const App = () => {
           <div className="grid md:grid-cols-12 gap-6 sm:gap-8 animate-in slide-in-from-bottom-8 print:hidden">
             <div className="md:col-span-8 space-y-6">
                <div className="bg-white p-6 sm:p-12 rounded-2xl sm:rounded-[3.5rem] shadow-sm border border-slate-100">
-                  <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-10"><button type="button" onClick={() => setView('teacher')} className="p-2 sm:p-3 bg-stone-50 rounded-xl sm:rounded-2xl text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><IconChevronLeft size={24}/></button><h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-stone-900">Sınav Tasarla</h2></div>
+                  <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-10"><button type="button" onClick={() => setView('teacher')} className="p-2 sm:p-3 bg-stone-50 rounded-xl sm:rounded-2xl text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><IconChevronLeft size={24}/></button><h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-stone-900">{newExam.id ? 'Sınavı Düzenle' : 'Sınav Tasarla'}</h2></div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
                      <input className="w-full sm:col-span-1 p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border focus:border-indigo-500 transition-colors placeholder:text-slate-300" placeholder="BAŞLIK (Örn: Matematik)" value={newExam.title} onChange={e => setNewExam({...newExam, title: e.target.value.toUpperCase()})} />
@@ -751,8 +796,10 @@ const App = () => {
                      <button type="button" onClick={generateWithAI} disabled={aiProcessing || (!aiText.trim() && !pdfFile)} className="w-full py-4 sm:py-5 bg-white text-indigo-900 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-lg shadow-xl hover:shadow-2xl disabled:opacity-50 hover:bg-indigo-50 active:scale-95 transition-all flex items-center justify-center gap-2"><IconTarget size={20}/> SORULARI OLUŞTUR</button>
                   </div>
 
-                  <div className="bg-slate-50 p-6 sm:p-10 rounded-2xl sm:rounded-[3rem] space-y-6 sm:space-y-8 border shadow-inner">
-                    <h3 className="font-black text-lg sm:text-xl uppercase tracking-widest text-slate-800">Manuel Soru Editörü</h3>
+                  <div className={"p-6 sm:p-10 rounded-2xl sm:rounded-[3rem] space-y-6 sm:space-y-8 border shadow-inner transition-colors " + (editingQIdx !== null ? 'bg-indigo-50 border-indigo-200' : 'bg-slate-50 border-slate-200')}>
+                    <h3 className={"font-black text-lg sm:text-xl uppercase tracking-widest " + (editingQIdx !== null ? 'text-indigo-900' : 'text-slate-800')}>
+                        {editingQIdx !== null ? `${editingQIdx + 1}. Soruyu Düzenle` : 'Manuel Soru Ekle'}
+                    </h3>
                     <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-4 scrollbar-hide">{['multiple-choice','true-false','short-answer','matching'].map(t=><button type="button" key={t} onClick={()=>setCurrentQuestion({...currentQuestion,type:t})} className={"px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[8px] sm:text-[10px] font-black uppercase border-2 sm:border-4 transition-all whitespace-nowrap shrink-0 " + (currentQuestion.type===t?'bg-indigo-600 text-white border-indigo-600 shadow-md':'bg-white text-slate-400 border-slate-200 hover:border-indigo-300')}>{t==='multiple-choice'?'Çoktan Seçmeli':t==='true-false'?'Doğru / Yanlış':t==='short-answer'?'Kısa Cevap':'Eşleştirme'}</button>)}</div>
                     <textarea className="w-full p-4 sm:p-6 bg-white rounded-xl sm:rounded-[2rem] shadow-sm outline-none font-bold sm:font-black text-sm sm:text-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-slate-300 min-h-[100px]" placeholder="Soru metni..." value={currentQuestion.text} onChange={e=>setCurrentQuestion({...currentQuestion, text:e.target.value})} />
                     
@@ -762,7 +809,10 @@ const App = () => {
                     
                     {currentQuestion.type === 'matching' && <div className="space-y-3 sm:space-y-4 bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-100">{currentQuestion.pairs.map((p,i)=><div key={i} className="flex flex-col sm:flex-row gap-2 sm:gap-4"><input className="flex-1 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-slate-50 border border-slate-200 outline-none font-bold text-sm sm:text-base focus:border-indigo-400 focus:bg-white transition-colors" placeholder="Sol İfade" value={p.left} onChange={e=>{const np=[...currentQuestion.pairs];np[i].left=e.target.value;setCurrentQuestion({...currentQuestion,pairs:np});}} /><div className="hidden sm:flex items-center justify-center text-slate-300"><IconChevronRight size={16}/></div><input className="flex-1 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-slate-50 border border-slate-200 outline-none font-bold text-sm sm:text-base focus:border-indigo-400 focus:bg-white transition-colors" placeholder="Sağ İfade" value={p.right} onChange={e=>{const np=[...currentQuestion.pairs];np[i].right=e.target.value;setCurrentQuestion({...currentQuestion,pairs:np});}} /></div>)}</div>}
                     
-                    <button type="button" onClick={handleAddQuestion} className="w-full bg-slate-900 text-white py-4 sm:py-6 rounded-xl sm:rounded-[2.5rem] font-black text-xs sm:text-sm uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center gap-2"><IconPlusCircle size={18}/> Taslağa Ekle</button>
+                    <button type="button" onClick={handleAddQuestion} className={"w-full text-white py-4 sm:py-6 rounded-xl sm:rounded-[2.5rem] font-black text-xs sm:text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 " + (editingQIdx !== null ? 'bg-indigo-600 hover:bg-indigo-700 shadow-lg' : 'bg-slate-900 hover:bg-indigo-600')}><IconPlusCircle size={18}/> {editingQIdx !== null ? 'Soruyu Güncelle' : 'Taslağa Ekle'}</button>
+                    {editingQIdx !== null && (
+                        <button type="button" onClick={() => { setCurrentQuestion(getInitialQuestion()); setEditingQIdx(null); }} className="w-full text-slate-500 py-3 rounded-xl font-bold text-xs uppercase hover:bg-slate-200 transition-colors">Düzenlemeyi İptal Et</button>
+                    )}
                   </div>
                </div>
             </div>
@@ -773,17 +823,25 @@ const App = () => {
                          <h3 className="font-black text-xl sm:text-2xl uppercase tracking-tighter text-slate-900">Taslak</h3>
                          <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase mt-1">{newExam.questions.length} Soru Eklendi</p>
                      </div>
-                     <button type="button" onClick={handleSaveExam} className="w-full sm:w-auto bg-green-600 text-white px-6 sm:px-8 py-3 rounded-xl sm:rounded-full text-xs sm:text-sm font-black shadow-md hover:shadow-lg disabled:opacity-40 hover:bg-green-700 transition-all flex items-center justify-center gap-2" disabled={newExam.questions.length===0}><IconSend size={16}/> YAYINLA</button>
+                     <button type="button" onClick={handleSaveExam} className="w-full sm:w-auto bg-green-600 text-white px-6 sm:px-8 py-3 rounded-xl sm:rounded-full text-xs sm:text-sm font-black shadow-md hover:shadow-lg disabled:opacity-40 hover:bg-green-700 transition-all flex items-center justify-center gap-2" disabled={newExam.questions.length===0}><IconSend size={16}/> {newExam.id ? 'GÜNCELLE' : 'YAYINLA'}</button>
                  </div>
                  <div className="space-y-3 sm:space-y-4 max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
                   {newExam.questions.length===0 && <div className="py-12 sm:py-20 text-center text-slate-300 font-black italic border-2 sm:border-4 border-dashed rounded-xl sm:rounded-[2.5rem] uppercase tracking-widest text-xs sm:text-base"><IconBookOpen size={40} className="mx-auto mb-3 sm:mb-4 opacity-50"/> BOŞ</div>}
                   {newExam.questions.map((q,i)=>(
-                      <div key={i} className="p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] border border-slate-200 relative group hover:border-indigo-300 hover:shadow-md transition-all">
+                      <div key={i} className={"p-4 sm:p-5 rounded-xl sm:rounded-[2rem] border relative group transition-all " + (editingQIdx === i ? 'bg-indigo-50 border-indigo-300 shadow-md' : 'bg-slate-50 border-slate-200 hover:border-indigo-300 hover:shadow-sm')}>
                           <div className="flex justify-between items-start mb-2 sm:mb-3">
                               <span className="text-[7px] sm:text-[9px] font-black bg-indigo-100 text-indigo-700 px-2 sm:px-3 py-1 rounded-md uppercase tracking-wider">{q.type === 'multiple-choice' ? 'TEST' : q.type === 'short-answer' ? 'KISA' : q.type === 'true-false' ? 'D/Y' : 'EŞLEŞTİR'}</span>
-                              <button type="button" onClick={()=>setNewExam({...newExam, questions:newExam.questions.filter((_,idx)=>idx!==i)})} className="text-slate-300 hover:text-red-500 bg-white p-1.5 rounded-lg shadow-sm border border-slate-100 transition-colors"><IconTrash2 size={14}/></button>
+                              <div className="flex gap-1">
+                                  {/* YENİ: Soru Düzenleme Butonu */}
+                                  <button type="button" onClick={()=>{ setCurrentQuestion(q); setEditingQIdx(i); }} className="text-slate-300 hover:text-blue-500 bg-white p-1.5 rounded-lg shadow-sm border border-slate-100 transition-colors"><IconEdit size={14}/></button>
+                                  <button type="button" onClick={()=>{
+                                      if(editingQIdx === i) { setCurrentQuestion(getInitialQuestion()); setEditingQIdx(null); }
+                                      else if (editingQIdx > i) { setEditingQIdx(prev => prev - 1); }
+                                      setNewExam({...newExam, questions:newExam.questions.filter((_,idx)=>idx!==i)})
+                                  }} className="text-slate-300 hover:text-red-500 bg-white p-1.5 rounded-lg shadow-sm border border-slate-100 transition-colors"><IconTrash2 size={14}/></button>
+                              </div>
                           </div>
-                          <p className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-3 leading-snug">{i+1}. {q.text}</p>
+                          <p className={"text-[10px] sm:text-xs font-bold line-clamp-3 leading-snug " + (editingQIdx === i ? 'text-indigo-900' : 'text-slate-700')}>{i+1}. {q.text}</p>
                       </div>
                   ))}
                 </div>
