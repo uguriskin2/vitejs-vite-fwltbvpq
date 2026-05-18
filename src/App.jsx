@@ -461,30 +461,63 @@ const App = () => {
     if (!activeExam) return;
     
     const finalCheatCount = cheatWarnings;
-    let score = 0;
+    let totalEarned = 0;
     
     const questionDetails = (activeExam.questions || []).map((q, idx) => {
       const ans = answers[idx];
       let isCorrect = false;
-      if (q.type === 'short-answer') isCorrect = ans?.toLowerCase().trim() === q.correctText?.toLowerCase().trim();
-      else if (q.type === 'matching') isCorrect = q.pairs?.every(p => ans?.[p.left] === p.right);
-      else isCorrect = parseInt(ans) === q.correct;
-      if (isCorrect) score++;
+      let earnedScore = 0;
+      
+      if (q.type === 'short-answer') {
+          // KISA CEVAP: Kelime bazlı oranlama ve noktalama duyarsızlaştırma
+          const normalize = (str) => (str || '').toLocaleLowerCase('tr-TR').replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,"").trim();
+          const correctNorm = normalize(q.correctText);
+          const ansNorm = normalize(ans);
+          
+          if (!ansNorm) {
+              earnedScore = 0;
+          } else if (correctNorm === ansNorm) {
+              earnedScore = 1;
+          } else {
+              const correctWords = correctNorm.split(/\s+/).filter(w => w.length > 0);
+              const ansWords = ansNorm.split(/\s+/).filter(w => w.length > 0);
+              
+              if (correctWords.length === 0) {
+                  earnedScore = 0;
+              } else {
+                  const ansWordsSet = new Set(ansWords);
+                  let matchCount = 0;
+                  correctWords.forEach(cw => {
+                      if (ansWordsSet.has(cw)) matchCount++;
+                  });
+                  earnedScore = matchCount / correctWords.length;
+              }
+          }
+          isCorrect = earnedScore === 1;
+      }
+      else {
+          if (q.type === 'matching') isCorrect = q.pairs?.every(p => ans?.[p.left] === p.right);
+          else isCorrect = parseInt(ans) === q.correct;
+          earnedScore = isCorrect ? 1 : 0;
+      }
+      
+      totalEarned += earnedScore;
       
       return { 
           topic: q.topic || 'Genel', 
           isCorrect,
+          earnedScore,
           questionText: q.text,
           givenAnswerText: getGivenAnswerText(q, ans),
           correctAnswerText: getCorrectAnswerText(q)
       };
     });
 
-    const finalScorePercentage = (score / activeExam.questions.length) * 100;
+    const finalScorePercentage = (totalEarned / activeExam.questions.length) * 100;
 
     const submissionData = {
         examId: activeExam.id, studentName, studentNumber, deviceId,
-        score: finalScorePercentage, correctCount: score,
+        score: finalScorePercentage, correctCount: totalEarned,
         totalQuestions: activeExam.questions.length, questionDetails, 
         submittedAt: new Date().toISOString(),
         cheatWarnings: finalCheatCount 
@@ -612,7 +645,7 @@ const App = () => {
         const tName = d.topic || 'Genel';
         if (!stats[tName]) stats[tName] = { correct: 0, total: 0 };
         stats[tName].total++;
-        if (d.isCorrect) stats[tName].correct++;
+        stats[tName].correct += (d.earnedScore !== undefined ? d.earnedScore : (d.isCorrect ? 1 : 0));
       });
     });
     return Object.keys(stats).map(name => ({ name, percentage: ((stats[name].correct / stats[name].total) * 100).toFixed(1) }));
@@ -911,7 +944,7 @@ const App = () => {
                                 {submissions.filter(s=>s.examId===activeExam.id).map((sub, i) => (
                                     <tr key={i} className={"transition-colors " + (selectedSubs.includes(sub.id) ? 'bg-indigo-50/50' : 'hover:bg-indigo-50/30')}>
                                         <td className="p-4 sm:p-6"><div className="text-base sm:text-xl tracking-tight uppercase text-indigo-900 mb-0.5">{sub.studentName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Numara: {sub.studentNumber}</div></td>
-                                        <td className="p-4 sm:p-6 text-center text-slate-500 font-mono text-sm sm:text-base">{sub.correctCount} <span className="text-slate-300">/</span> {sub.totalQuestions}</td>
+                                        <td className="p-4 sm:p-6 text-center text-slate-500 font-mono text-sm sm:text-base">{Number(sub.correctCount).toFixed(1).replace('.0', '')} <span className="text-slate-300">/</span> {sub.totalQuestions}</td>
                                         <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 sm:px-5 py-1 sm:py-1.5 bg-white border-2 sm:border-4 rounded-full text-xs sm:text-sm shadow-sm font-black " + (Number(sub.score) >= 50 ? 'border-green-100 text-green-600' : 'border-red-100 text-red-500')}>{Number(sub.score).toFixed(0)}</span></td>
                                         <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 py-1 bg-white border rounded-full text-xs font-black " + ((sub.cheatWarnings || 0) > 0 ? 'border-red-200 text-red-600' : 'border-slate-100 text-slate-300')}>{sub.cheatWarnings || 0} Kez</span></td>
                                         <td className="p-4 sm:p-6 text-center text-xs sm:text-sm text-slate-500 font-bold">{sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '-'}</td>
@@ -943,30 +976,32 @@ const App = () => {
                                           <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mt-1 flex flex-wrap items-center gap-1">Öğrenci No: {sub.studentNumber} • PUAN: {Number(sub.score).toFixed(0)} • KURAL İHLALİ: {sub.cheatWarnings || 0} • TARİH: {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '-'}</p>
                                       </div>
                                       <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 flex items-center justify-between gap-4">
-                                          <p className="text-xs sm:text-sm font-black text-slate-700">{sub.correctCount} Doğru <span className="text-slate-300 mx-1">/</span> {sub.totalQuestions} Soru</p>
+                                          <p className="text-xs sm:text-sm font-black text-slate-700">{Number(sub.correctCount).toFixed(1).replace('.0', '')} Doğru Puan <span className="text-slate-300 mx-1">/</span> {sub.totalQuestions} Soru</p>
                                           <button type="button" onClick={() => handleDeleteSubmission(sub.id)} className="p-1.5 sm:p-2 bg-white border border-slate-200 rounded-md text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all print:hidden" title="Bu öğrencinin sonucunu sil">
                                               <IconTrash2 size={14}/>
                                           </button>
                                       </div>
                                   </div>
                                   <div className="space-y-4 sm:space-y-6">
-                                      {(sub.questionDetails || []).map((qd, qIdx) => (
+                                      {(sub.questionDetails || []).map((qd, qIdx) => {
+                                          const finalEarned = qd.earnedScore !== undefined ? qd.earnedScore : (qd.isCorrect ? 1 : 0);
+                                          return (
                                           <div key={qIdx} className="bg-slate-50 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200/60">
                                               <p className="text-sm sm:text-base font-black text-slate-800 mb-3 sm:mb-4 uppercase leading-snug">{qIdx + 1}. {qd.questionText}</p>
                                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                                  <div className={"p-3 sm:p-4 rounded-xl border-2 flex flex-col " + (qd.isCorrect ? "bg-green-50/50 border-green-100 text-green-800" : "bg-red-50/50 border-red-100 text-red-800")}>
+                                                  <div className={"p-3 sm:p-4 rounded-xl border-2 flex flex-col " + (finalEarned === 1 ? "bg-green-50/50 border-green-100 text-green-800" : (finalEarned > 0 ? "bg-amber-50/50 border-amber-100 text-amber-800" : "bg-red-50/50 border-red-100 text-red-800"))}>
                                                       <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Öğrencinin Cevabı</span>
-                                                      <span className="font-black text-xs sm:text-sm">{qd.givenAnswerText} {qd.isCorrect ? "✅" : "❌"}</span>
+                                                      <span className="font-black text-xs sm:text-sm">{qd.givenAnswerText} {finalEarned === 1 ? "✅" : (finalEarned > 0 ? `⚠️ Kısmi Puan (%${Math.round(finalEarned * 100)})` : "❌")}</span>
                                                   </div>
-                                                  {!qd.isCorrect && (
+                                                  {finalEarned < 1 && (
                                                       <div className="p-3 sm:p-4 rounded-xl border-2 bg-indigo-50/30 border-indigo-100 text-indigo-800 flex flex-col">
-                                                          <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Doğru Cevap</span>
+                                                          <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Beklenen Cevap</span>
                                                           <span className="font-black text-xs sm:text-sm">{qd.correctAnswerText}</span>
                                                       </div>
                                                   )}
                                               </div>
                                           </div>
-                                      ))}
+                                      )})}
                                   </div>
                               </div>
                           ))}
@@ -1019,29 +1054,31 @@ const App = () => {
                 </div>
 
                 <div className="flex justify-center gap-4 sm:gap-8 mb-12">
-                    <div className="bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100"><p className="text-2xl font-black text-slate-800">{examResult.correctCount}</p><p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Doğru</p></div>
-                    <div className="bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100"><p className="text-2xl font-black text-slate-800">{examResult.totalQuestions - examResult.correctCount}</p><p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Yanlış</p></div>
+                    <div className="bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100"><p className="text-2xl font-black text-slate-800">{Number(examResult.correctCount).toFixed(1).replace('.0', '')}</p><p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Doğru Puanı</p></div>
+                    <div className="bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100"><p className="text-2xl font-black text-slate-800">{(examResult.totalQuestions - examResult.correctCount).toFixed(1).replace('.0', '')}</p><p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Kayıp Puan</p></div>
                 </div>
 
                 <div className="text-left space-y-6 sm:space-y-8 border-t-2 border-dashed border-slate-200 pt-10 sm:pt-12">
                     <h3 className="font-black text-xl sm:text-2xl uppercase text-slate-800 mb-6 text-center">Cevap Kağıdın</h3>
-                    {examResult.details.map((qd, qIdx) => (
+                    {examResult.details.map((qd, qIdx) => {
+                        const finalEarned = qd.earnedScore !== undefined ? qd.earnedScore : (qd.isCorrect ? 1 : 0);
+                        return (
                         <div key={qIdx} className="bg-slate-50 p-5 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-slate-200">
                             <p className="text-sm sm:text-base font-black text-slate-800 mb-4 uppercase leading-snug">{qIdx + 1}. {qd.questionText}</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                <div className={"p-3 sm:p-4 rounded-xl border-2 flex flex-col " + (qd.isCorrect ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700")}>
+                                <div className={"p-3 sm:p-4 rounded-xl border-2 flex flex-col " + (finalEarned === 1 ? "bg-green-50 border-green-200 text-green-700" : (finalEarned > 0 ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-red-50 border-red-200 text-red-700"))}>
                                     <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Senin Cevabın</span>
-                                    <span className="font-black text-xs sm:text-sm">{qd.givenAnswerText} {qd.isCorrect ? "✅" : "❌"}</span>
+                                    <span className="font-black text-xs sm:text-sm">{qd.givenAnswerText} {finalEarned === 1 ? "✅" : (finalEarned > 0 ? `⚠️ Kısmi Puan (%${Math.round(finalEarned * 100)})` : "❌")}</span>
                                 </div>
-                                {!qd.isCorrect && (
+                                {finalEarned < 1 && (
                                     <div className="p-3 sm:p-4 rounded-xl border-2 bg-indigo-50 border-indigo-200 text-indigo-700 flex flex-col">
-                                        <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Doğru Cevap</span>
+                                        <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Beklenen Cevap</span>
                                         <span className="font-black text-xs sm:text-sm">{qd.correctAnswerText}</span>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    ))}
+                    )})}
                 </div>
 
                 <div className="mt-12 sm:mt-16 pt-8 border-t border-slate-100">
