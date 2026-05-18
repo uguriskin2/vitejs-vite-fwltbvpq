@@ -112,7 +112,6 @@ const App = () => {
   const [aiText, setAiText] = useState('');
   const [aiConfig, setAiConfig] = useState({ count: 10, types: ['multiple-choice'] });
 
-  // YENİ: PDF'in yanında Resim dosyalarını da destekleyen Upload State'leri
   const [uploadData, setUploadData] = useState(null);
   const [uploadName, setUploadName] = useState('');
   const [uploadType, setUploadType] = useState('');
@@ -129,10 +128,8 @@ const App = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [examResult, setExamResult] = useState(null); 
 
-  // --- ÇOKLU SİLME İÇİN SEÇİM STATE'İ ---
   const [selectedSubs, setSelectedSubs] = useState([]);
 
-  // --- KOPYA (İHLAL) TAKİP STATE'LERİ ---
   const [cheatWarnings, setCheatWarnings] = useState(0);
   const isAway = useRef(false);
 
@@ -157,7 +154,6 @@ const App = () => {
     } catch (e) {}
   }, []);
 
-  // --- KOPYA KORUMA DİNLEYİCİSİ ---
   useEffect(() => {
       const handleAway = () => {
           if (view === 'exam' && !isAway.current) {
@@ -191,7 +187,6 @@ const App = () => {
       }
   }, [view]);
 
-  // --- KOPYA UYARISI YÖNETİMİ ---
   useEffect(() => {
       if (view !== 'exam' || cheatWarnings === 0) return;
 
@@ -201,12 +196,11 @@ const App = () => {
           showModal("🚨 Son Uyarı (2/3)", "Sınav ekranından tekrar ayrıldınız!\n\nBir kez daha kural ihlali yaparsanız sınavınız iptal edilecek ve sıfır (0) puan verilecektir.", "error");
       } else if (cheatWarnings >= 3) {
           showModal("❌ Sınav Sonlandırıldı", "Kopya kurallarını üst üste ihlal ettiğiniz için sınavınız sistem tarafından otomatik olarak kapatıldı.", "error");
-          handleFinishExam(true); // Zorunlu bitirme
+          handleFinishExam(true); 
       }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cheatWarnings]);
 
-  // --- API BAĞLANTISI (YENİ: Resim (Image) Desteği Eklendi) ---
   async function callGemini(prompt, systemInstruction = "", fileBase64 = null, mimeType = null) {
     const currentKey = geminiKey ? geminiKey.trim() : "";
     if (!currentKey) throw new Error("Lütfen 'AI Sihirbazı' panelindeki kutucuğa Google Gemini API Anahtarınızı girin.");
@@ -334,12 +328,9 @@ const App = () => {
     }));
   };
 
-  // YENİ: Dosya Yükleme - Resim formatlarını (PNG, JPG) dahil etme
-  const handleFileUpload = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+  // YENİ: Dosya İşleme (Seçme ve Yapıştırma için ortak fonksiyon)
+  const processFile = (file) => {
+      const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
       if (!allowedTypes.includes(file.type)) { 
           showModal("Hata", "Lütfen sadece PDF veya Resim (PNG, JPG) dosyası yükleyin.", "error"); 
           return; 
@@ -350,12 +341,43 @@ const App = () => {
           return; 
       }
       
-      setUploadName(file.name);
+      setUploadName(file.name && file.name !== 'image.png' ? file.name : 'Panodan_Kopyalanan_Resim.png');
       setUploadType(file.type);
       const reader = new FileReader();
       reader.onloadend = () => { setUploadData(reader.result); };
       reader.readAsDataURL(file);
   };
+
+  const handleFileUpload = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      processFile(file);
+  };
+
+  // YENİ: Panodan Resim Yapıştırma (Ctrl+V) Desteği
+  useEffect(() => {
+      if (view !== 'create' || !isTeacher) return;
+
+      const handlePaste = (e) => {
+          const items = e.clipboardData?.items;
+          if (!items) return;
+
+          for (let i = 0; i < items.length; i++) {
+              if (items[i].type.indexOf('image') !== -1) {
+                  const file = items[i].getAsFile();
+                  if (file) {
+                      e.preventDefault(); 
+                      processFile(file);
+                      break;
+                  }
+              }
+          }
+      };
+
+      window.addEventListener('paste', handlePaste);
+      return () => window.removeEventListener('paste', handlePaste);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, isTeacher]);
 
   const generateWithAI = async () => {
     if (!geminiKey || geminiKey.trim() === "") { showModal("API Anahtarı Eksik", "Lütfen AI Sihirbazı panelindeki kutucuğa Google Gemini API Anahtarınızı girin.", "error"); return; }
@@ -841,17 +863,17 @@ const App = () => {
                      <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
                         <div className="bg-white/5 p-4 sm:p-5 rounded-xl sm:rounded-3xl border border-white/10">
                             <div className="flex items-center justify-between mb-3 sm:mb-4">
-                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-indigo-200">PDF / RESİM DOSYASINDAN ÜRET (OPSİYONEL)</span>
+                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-indigo-200">PDF / RESİM DOSYASINDAN ÜRET</span>
                                 {uploadData && <button type="button" onClick={()=>{setUploadData(null);setUploadName('');setUploadType('');setPageRange('');}} className="text-red-400 hover:text-red-300 text-xs font-bold transition-colors"><IconTrash2 size={16}/></button>}
                             </div>
                             
                             {!uploadData ? (
-                                <label className="flex flex-col items-center justify-center w-full h-20 sm:h-24 border-2 border-dashed border-indigo-300/30 rounded-xl sm:rounded-2xl cursor-pointer hover:bg-white/10 transition-all">
+                                <label className="flex flex-col items-center justify-center w-full h-24 sm:h-28 border-2 border-dashed border-indigo-300/30 rounded-xl sm:rounded-2xl cursor-pointer hover:bg-white/10 transition-all text-center px-4">
                                     <div className="flex gap-2 text-indigo-200 mb-1 sm:mb-2">
                                         <IconFileText size={20} />
                                         <IconImage size={20} />
                                     </div>
-                                    <span className="text-indigo-200 font-bold text-[10px] sm:text-xs uppercase tracking-widest mt-1 sm:mt-2">PDF VEYA RESİM SEÇ / SÜRÜKLE</span>
+                                    <span className="text-indigo-200 font-bold text-[10px] sm:text-xs uppercase tracking-widest mt-1 sm:mt-2">SEÇ, SÜRÜKLE VEYA YAPIŞTIR (CTRL+V)</span>
                                     <input type="file" accept=".pdf,image/png,image/jpeg,image/jpg" className="hidden" onChange={handleFileUpload} />
                                 </label>
                             ) : (
@@ -915,7 +937,6 @@ const App = () => {
                           <div className="flex justify-between items-start mb-2 sm:mb-3">
                               <span className="text-[7px] sm:text-[9px] font-black bg-indigo-100 text-indigo-700 px-2 sm:px-3 py-1 rounded-md uppercase tracking-wider">{q.type === 'multiple-choice' ? 'TEST' : q.type === 'short-answer' ? 'KISA' : q.type === 'true-false' ? 'D/Y' : 'EŞLEŞTİR'}</span>
                               <div className="flex gap-1">
-                                  {/* YENİ: Soru Düzenleme Butonu */}
                                   <button type="button" onClick={()=>{ setCurrentQuestion(q); setEditingQIdx(i); }} className="text-slate-300 hover:text-blue-500 bg-white p-1.5 rounded-lg shadow-sm border border-slate-100 transition-colors"><IconEdit size={14}/></button>
                                   <button type="button" onClick={()=>{
                                       if(editingQIdx === i) { setCurrentQuestion(getInitialQuestion()); setEditingQIdx(null); }
@@ -933,7 +954,7 @@ const App = () => {
           </div>
         )}
 
-        {/* --- YÖNETİCİ ANALİZ PANELİ (Tümünü Sil ve Tekil Silme Özelliği Eklendi) --- */}
+        {/* --- YÖNETİCİ ANALİZ PANELİ --- */}
         {view === 'analytics' && activeExam && (
           <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
