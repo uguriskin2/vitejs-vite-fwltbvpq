@@ -116,7 +116,7 @@ const App = () => {
   const [pageRange, setPageRange] = useState('');
 
   const [currentQuestion, setCurrentQuestion] = useState(getInitialQuestion());
-  const [editingQIdx, setEditingQIdx] = useState(null); // YENİ: Hangi sorunun düzenlendiğini takip eder
+  const [editingQIdx, setEditingQIdx] = useState(null); 
   const [activeExam, setActiveExam] = useState(null);
   
   const [studentName, setStudentName] = useState('');
@@ -198,7 +198,7 @@ const App = () => {
           showModal("🚨 Son Uyarı (2/3)", "Sınav ekranından tekrar ayrıldınız!\n\nBir kez daha kural ihlali yaparsanız sınavınız iptal edilecek ve sıfır (0) puan verilecektir.", "error");
       } else if (cheatWarnings >= 3) {
           showModal("❌ Sınav Sonlandırıldı", "Kopya kurallarını üst üste ihlal ettiğiniz için sınavınız sistem tarafından otomatik olarak kapatıldı.", "error");
-          handleFinishExam();
+          handleFinishExam(true); // Zorunlu bitirme
       }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cheatWarnings]);
@@ -285,9 +285,10 @@ const App = () => {
     if (view === 'exam' && timeLeft > 0) {
       timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     } else if (view === 'exam' && timeLeft === 0) {
-      handleFinishExam();
+      handleFinishExam(true); // Süre bittiğinde zorunlu bitir
     }
     return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, timeLeft]);
 
   const showModal = (title, message, type = 'info', onConfirm = null) => {
@@ -316,12 +317,11 @@ const App = () => {
     document.body.removeChild(textArea);
   };
 
-  // YENİ: Sınav Düzenleme Fonksiyonu
   const handleEditExam = (exam) => {
-    setNewExam(exam); // Sınav verilerini form durumuna aktar (id dahil)
-    setCurrentQuestion(getInitialQuestion()); // Soru editörünü temizle
-    setEditingQIdx(null); // Soru seçimini sıfırla
-    setView('create'); // Düzenleme ekranına geç
+    setNewExam(exam); 
+    setCurrentQuestion(getInitialQuestion()); 
+    setEditingQIdx(null); 
+    setView('create'); 
   };
 
   const toggleAiType = (type) => {
@@ -386,23 +386,20 @@ const App = () => {
     finally { setAiProcessing(false); }
   };
 
-  // YENİ: Soru Ekleme / Güncelleme (Düzenleme Desteği Eklendi)
   const handleAddQuestion = () => {
     if (!currentQuestion.text) return;
     
     const formattedQuestion = { ...currentQuestion, topic: currentQuestion.topic?.trim() || "Genel" };
 
     if (editingQIdx !== null) {
-        // Var olan soruyu güncelle
         const updatedQuestions = [...newExam.questions];
         updatedQuestions[editingQIdx] = formattedQuestion;
         setNewExam(prev => ({ ...prev, questions: updatedQuestions }));
-        setEditingQIdx(null); // Güncelleme bittikten sonra edit modundan çık
+        setEditingQIdx(null); 
     } else {
-        // Yeni soru olarak sona ekle
         setNewExam(prev => ({ ...prev, questions: [...(prev.questions || []), formattedQuestion] }));
     }
-    setCurrentQuestion(getInitialQuestion()); // Editörü temizle
+    setCurrentQuestion(getInitialQuestion()); 
   };
 
   const handleSaveExam = async () => {
@@ -412,7 +409,6 @@ const App = () => {
     }
     try {
       if (newExam.id) {
-          // YENİ: Önceden var olan sınavı Firebase'de güncelle
           await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', newExam.id), {
               title: newExam.title,
               duration: newExam.duration,
@@ -421,7 +417,6 @@ const App = () => {
           });
           showModal("Başarılı", "Sınav değişiklikleri başarıyla kaydedildi.", "success");
       } else {
-          // Yeni sınav oluştur
           await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'exams'), { ...newExam, createdAt: serverTimestamp(), userId: user.uid });
           showModal("Başarılı", "Yeni sınav başarıyla oluşturuldu.", "success");
       }
@@ -457,82 +452,120 @@ const App = () => {
     setView('exam');
   };
 
-  const handleFinishExam = async () => {
+  // YENİ: Boş soru kontrolü destekli bitirme fonksiyonu
+  const handleFinishExam = async (forceParam) => {
     if (!activeExam) return;
+    const isForced = forceParam === true; // Parametre true ise veya süre bittiyse zorla bitir
     
-    const finalCheatCount = cheatWarnings;
-    let totalEarned = 0;
-    
-    const questionDetails = (activeExam.questions || []).map((q, idx) => {
-      const ans = answers[idx];
-      let isCorrect = false;
-      let earnedScore = 0;
-      
-      if (q.type === 'short-answer') {
-          // KISA CEVAP: Kelime bazlı oranlama ve noktalama duyarsızlaştırma
-          const normalize = (str) => (str || '').toLocaleLowerCase('tr-TR').replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,"").trim();
-          const correctNorm = normalize(q.correctText);
-          const ansNorm = normalize(ans);
-          
-          if (!ansNorm) {
-              earnedScore = 0;
-          } else if (correctNorm === ansNorm) {
-              earnedScore = 1;
-          } else {
-              const correctWords = correctNorm.split(/\s+/).filter(w => w.length > 0);
-              const ansWords = ansNorm.split(/\s+/).filter(w => w.length > 0);
-              
-              if (correctWords.length === 0) {
-                  earnedScore = 0;
-              } else {
-                  const ansWordsSet = new Set(ansWords);
-                  let matchCount = 0;
-                  correctWords.forEach(cw => {
-                      if (ansWordsSet.has(cw)) matchCount++;
-                  });
-                  earnedScore = matchCount / correctWords.length;
-              }
-          }
-          isCorrect = earnedScore === 1;
-      }
-      else {
-          if (q.type === 'matching') isCorrect = q.pairs?.every(p => ans?.[p.left] === p.right);
-          else isCorrect = parseInt(ans) === q.correct;
-          earnedScore = isCorrect ? 1 : 0;
-      }
-      
-      totalEarned += earnedScore;
-      
-      return { 
-          topic: q.topic || 'Genel', 
-          isCorrect,
-          earnedScore,
-          questionText: q.text,
-          givenAnswerText: getGivenAnswerText(q, ans),
-          correctAnswerText: getCorrectAnswerText(q)
-      };
+    // Boş bırakılan soruları kontrol et
+    const unanswered = [];
+    (activeExam.questions || []).forEach((q, idx) => {
+        const ans = answers[idx];
+        let isMissing = false;
+        
+        if (ans === undefined || ans === null) {
+            isMissing = true;
+        } else if (q.type === 'short-answer' && String(ans).trim() === '') {
+            isMissing = true;
+        } else if (q.type === 'matching') {
+            if (typeof ans !== 'object') {
+                isMissing = true;
+            } else {
+                const hasAll = q.pairs.every(p => ans[p.left] && String(ans[p.left]).trim() !== '');
+                if (!hasAll) isMissing = true;
+            }
+        }
+        
+        if (isMissing) unanswered.push(idx + 1);
     });
 
-    const finalScorePercentage = (totalEarned / activeExam.questions.length) * 100;
+    const submitData = async () => {
+        const finalCheatCount = cheatWarnings;
+        let totalEarned = 0;
+        
+        const questionDetails = (activeExam.questions || []).map((q, idx) => {
+          const ans = answers[idx];
+          let isCorrect = false;
+          let earnedScore = 0;
+          
+          if (q.type === 'short-answer') {
+              const normalize = (str) => (str || '').toLocaleLowerCase('tr-TR').replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,"").trim();
+              const correctNorm = normalize(q.correctText);
+              const ansNorm = normalize(ans);
+              
+              if (!ansNorm) {
+                  earnedScore = 0;
+              } else if (correctNorm === ansNorm) {
+                  earnedScore = 1;
+              } else {
+                  const correctWords = correctNorm.split(/\s+/).filter(w => w.length > 0);
+                  const ansWords = ansNorm.split(/\s+/).filter(w => w.length > 0);
+                  
+                  if (correctWords.length === 0) {
+                      earnedScore = 0;
+                  } else {
+                      const ansWordsSet = new Set(ansWords);
+                      let matchCount = 0;
+                      correctWords.forEach(cw => {
+                          if (ansWordsSet.has(cw)) matchCount++;
+                      });
+                      earnedScore = matchCount / correctWords.length;
+                  }
+              }
+              isCorrect = earnedScore === 1;
+          }
+          else {
+              if (q.type === 'matching') isCorrect = q.pairs?.every(p => ans?.[p.left] === p.right);
+              else isCorrect = parseInt(ans) === q.correct;
+              earnedScore = isCorrect ? 1 : 0;
+          }
+          
+          totalEarned += earnedScore;
+          
+          return { 
+              topic: q.topic || 'Genel', 
+              isCorrect,
+              earnedScore,
+              questionText: q.text,
+              givenAnswerText: getGivenAnswerText(q, ans),
+              correctAnswerText: getCorrectAnswerText(q)
+          };
+        });
 
-    const submissionData = {
-        examId: activeExam.id, studentName, studentNumber, deviceId,
-        score: finalScorePercentage, correctCount: totalEarned,
-        totalQuestions: activeExam.questions.length, questionDetails, 
-        submittedAt: new Date().toISOString(),
-        cheatWarnings: finalCheatCount 
+        const finalScorePercentage = (totalEarned / activeExam.questions.length) * 100;
+
+        const submissionData = {
+            examId: activeExam.id, studentName, studentNumber, deviceId,
+            score: finalScorePercentage, correctCount: totalEarned,
+            totalQuestions: activeExam.questions.length, questionDetails, 
+            submittedAt: new Date().toISOString(),
+            cheatWarnings: finalCheatCount 
+        };
+
+        setExamResult({ ...submissionData, details: questionDetails });
+
+        try {
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'submissions'), submissionData);
+          setActiveExam(null); setAnswers({}); setStudentExamCode('');
+          setView('result'); 
+        } catch (e) {
+          setSubmissions(prev => [...prev, {...submissionData, id: Date.now().toString()}]);
+          setActiveExam(null); setAnswers({}); setStudentExamCode('');
+          setView('result');
+        }
     };
 
-    setExamResult({ ...submissionData, details: questionDetails });
-
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'submissions'), submissionData);
-      setActiveExam(null); setAnswers({}); setStudentExamCode('');
-      setView('result'); 
-    } catch (e) {
-      setSubmissions(prev => [...prev, {...submissionData, id: Date.now().toString()}]);
-      setActiveExam(null); setAnswers({}); setStudentExamCode('');
-      setView('result');
+    // Zorunlu değilse ve boş soru varsa önce kullanıcıyı uyar
+    if (!isForced && unanswered.length > 0) {
+        showModal(
+            "Cevapsız Sorularınız Var!", 
+            `Şu soruları boş bıraktınız veya eksik cevapladınız:\n👉 Soru: ${unanswered.join(', ')}\n\nEksik sorularınız varken yine de sınavı bitirmek istiyor musunuz?`, 
+            "confirm", 
+            submitData
+        );
+    } else {
+        // Eksik yoksa veya süre bittiyse direkt kaydet
+        submitData();
     }
   };
 
@@ -691,7 +724,6 @@ const App = () => {
             <button type="button" onClick={() => setShowPassModal(true)} className="flex items-center gap-1 sm:gap-2 font-bold text-slate-500 hover:text-indigo-600 transition-colors text-xs sm:text-base"><IconLock size={16}/> <span className="hidden sm:inline">Panel</span></button>
           ) : (
             <><button type="button" onClick={() => {
-                // YENİ: Yönetim paneline girerken editörü sıfırla
                 setNewExam({ title: '', duration: 30, examCode: '', questions: [] });
                 setEditingQIdx(null);
                 setView('teacher');
@@ -740,7 +772,6 @@ const App = () => {
                   <div key={exam.id} className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-[3rem] shadow-sm border border-slate-100 group relative hover:shadow-lg transition-all">
                     <div className="absolute top-0 right-0 p-3 sm:p-4 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all flex gap-1 sm:gap-2">
                        <button type="button" onClick={(e) => handleCopyLink(e, exam)} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-indigo-500 hover:bg-indigo-50" title="Kodu ve Linki Kopyala"><IconLink size={18}/></button>
-                       {/* YENİ: Sınav Düzenleme Butonu */}
                        <button type="button" onClick={(e) => { e.stopPropagation(); handleEditExam(exam); }} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-blue-500 hover:bg-blue-50" title="Sınavı Düzenle"><IconEdit size={18}/></button>
                        <button type="button" onClick={(e) => { e.stopPropagation(); showModal("Sil", "Bu sınav kalıcı olarak silinecek. Emin misiniz?", "confirm", () => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id))); }} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-red-500 hover:bg-red-50" title="Sil"><IconTrash2 size={18}/></button>
                     </div>
@@ -1129,7 +1160,7 @@ const App = () => {
                 ))}
                 
                 <div className="flex flex-col items-center gap-4 sm:gap-6 pt-10 sm:pt-16 border-t-2 border-dashed border-slate-200">
-                    <button type="button" onClick={handleFinishExam} className="w-full sm:w-auto bg-indigo-600 text-white px-8 sm:px-20 py-4 sm:py-6 rounded-2xl sm:rounded-[3rem] font-black text-lg sm:text-2xl shadow-xl sm:shadow-2xl hover:bg-indigo-700 hover:shadow-indigo-500/30 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 uppercase tracking-tighter border-b-4 sm:border-b-8 border-indigo-800"><IconSend size={24} className="sm:w-8 sm:h-8" /> <span className="mt-0.5">Sınavı Bitir</span></button>
+                    <button type="button" onClick={() => handleFinishExam(false)} className="w-full sm:w-auto bg-indigo-600 text-white px-8 sm:px-20 py-4 sm:py-6 rounded-2xl sm:rounded-[3rem] font-black text-lg sm:text-2xl shadow-xl sm:shadow-2xl hover:bg-indigo-700 hover:shadow-indigo-500/30 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 uppercase tracking-tighter border-b-4 sm:border-b-8 border-indigo-800"><IconSend size={24} className="sm:w-8 sm:h-8" /> <span className="mt-0.5">Sınavı Bitir</span></button>
                     <p className="text-slate-400 font-bold uppercase tracking-widest text-[8px] sm:text-[9px] flex items-center gap-1.5"><IconLock size={10}/> Sınav esnasında başka sekmeye geçmek veya soruları kopyalamak yasaktır.</p>
                 </div>
              </div>
