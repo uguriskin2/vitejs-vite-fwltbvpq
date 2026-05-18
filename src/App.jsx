@@ -8,7 +8,7 @@ import {
   getAuth, signInAnonymously, onAuthStateChanged 
 } from 'firebase/auth';
 
-// --- İkonlar ---
+// --- İkonlar (Dış kütüphane çökmesini engellemek için doğrudan gömüldü) ---
 const IconTarget = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
 const IconLock = ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
 const IconLogOut = ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
@@ -29,7 +29,6 @@ const IconSend = ({size=40, className=""}) => <svg className={className} width={
 const IconActivity = ({size=64, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
 const IconActivitySmall = ({size=32, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
 const IconFileText = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
-const IconAlertTriangle = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
 
 // --- Firebase Yapılandırması ---
 const firebaseConfig = {
@@ -46,9 +45,17 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = 'pro-sinav-cloud-v5';
 
+// DİKKAT: Kendi Gemini API Anahtarınızı Buraya Yapıştırın!
+const apiKey = ""; 
+
 const getInitialQuestion = () => ({ 
-  text: '', type: 'multiple-choice', topic: '', imageUrl: '', 
-  options: ['', '', '', ''], correct: 0, correctText: '', 
+  text: '', 
+  type: 'multiple-choice', 
+  topic: '', 
+  imageUrl: '', 
+  options: ['', '', '', ''], 
+  correct: 0, 
+  correctText: '', 
   pairs: [{left: '', right: ''}, {left: '', right: ''}, {left: '', right: ''}] 
 });
 
@@ -117,7 +124,10 @@ const App = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [examResult, setExamResult] = useState(null); 
 
-  // --- YENİ: KOPYA (İHLAL) TAKİP STATE'LERİ ---
+  // --- ÇOKLU SİLME İÇİN SEÇİM STATE'İ ---
+  const [selectedSubs, setSelectedSubs] = useState([]);
+
+  // --- KOPYA (İHLAL) TAKİP STATE'LERİ ---
   const [cheatWarnings, setCheatWarnings] = useState(0);
   const isAway = useRef(false);
 
@@ -142,7 +152,7 @@ const App = () => {
     } catch (e) {}
   }, []);
 
-  // --- YENİ: KOPYA KORUMA DİNLEYİCİSİ (Sadece sınav esnasında çalışır) ---
+  // --- KOPYA KORUMA DİNLEYİCİSİ (Sadece sınav esnasında çalışır) ---
   useEffect(() => {
       const handleAway = () => {
           if (view === 'exam' && !isAway.current) {
@@ -176,7 +186,7 @@ const App = () => {
       }
   }, [view]);
 
-  // --- YENİ: KOPYA UYARISI YÖNETİMİ ---
+  // --- KOPYA UYARISI YÖNETİMİ ---
   useEffect(() => {
       if (view !== 'exam' || cheatWarnings === 0) return;
 
@@ -185,7 +195,6 @@ const App = () => {
       } else if (cheatWarnings === 2) {
           showModal("🚨 Son Uyarı (2/3)", "Sınav ekranından tekrar ayrıldınız!\n\nBir kez daha kural ihlali yaparsanız sınavınız iptal edilecek ve sıfır (0) puan verilecektir.", "error");
       } else if (cheatWarnings >= 3) {
-          // 3 İhlalde doğrudan sınavı bitir
           showModal("❌ Sınav Sonlandırıldı", "Kopya kurallarını üst üste ihlal ettiğiniz için sınavınız sistem tarafından otomatik olarak kapatıldı.", "error");
           handleFinishExam();
       }
@@ -403,7 +412,6 @@ const App = () => {
         return;
     }
     
-    // Güvenlik sayacı sıfırlama
     setCheatWarnings(0);
     isAway.current = false;
     
@@ -418,10 +426,9 @@ const App = () => {
   const handleFinishExam = async () => {
     if (!activeExam) return;
     
-    // Güncel kopya sayısını al
     const finalCheatCount = cheatWarnings;
-
     let score = 0;
+    
     const questionDetails = (activeExam.questions || []).map((q, idx) => {
       const ans = answers[idx];
       let isCorrect = false;
@@ -446,7 +453,7 @@ const App = () => {
         score: finalScorePercentage, correctCount: score,
         totalQuestions: activeExam.questions.length, questionDetails, 
         submittedAt: new Date().toISOString(),
-        cheatWarnings: finalCheatCount // İhlalleri panele kaydet
+        cheatWarnings: finalCheatCount 
     };
 
     setExamResult({ ...submissionData, details: questionDetails });
@@ -462,6 +469,58 @@ const App = () => {
     }
   };
 
+  // --- SİLME İŞLEMLERİ ---
+  const handleDeleteSubmission = (subId) => {
+    showModal("Sonucu Sil", "Bu öğrencinin sınav sonucunu kalıcı olarak silmek istediğinize emin misiniz?", "confirm", async () => {
+      try {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'submissions', subId));
+      } catch (error) {
+        setSubmissions(prev => prev.filter(s => s.id !== subId));
+      }
+    });
+  };
+
+  const handleDeleteAllSubmissions = (examId) => {
+    showModal("Tümünü Sil", "Bu sınava ait TÜM öğrenci sonuçlarını kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.", "confirm", async () => {
+      try {
+        const subsToDelete = submissions.filter(s => s.examId === examId);
+        for (const sub of subsToDelete) {
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'submissions', sub.id));
+        }
+        setSelectedSubs([]);
+      } catch (error) {
+        setSubmissions(prev => prev.filter(s => s.examId !== examId));
+      }
+    });
+  };
+
+  const toggleSubSelection = (subId) => {
+    setSelectedSubs(prev => prev.includes(subId) ? prev.filter(id => id !== subId) : [...prev, subId]);
+  };
+
+  const toggleAllSubs = (currentExamSubs) => {
+    if (selectedSubs.length === currentExamSubs.length) {
+        setSelectedSubs([]);
+    } else {
+        setSelectedSubs(currentExamSubs.map(s => s.id));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    showModal("Seçilenleri Sil", `${selectedSubs.length} adet öğrenci sonucunu kalıcı olarak silmek istediğinize emin misiniz?`, "confirm", async () => {
+      try {
+        for (const subId of selectedSubs) {
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'submissions', subId));
+        }
+        setSelectedSubs([]);
+      } catch (error) {
+        setSubmissions(prev => prev.filter(s => !selectedSubs.includes(s.id)));
+        setSelectedSubs([]);
+      }
+    });
+  };
+
+  // --- YAZDIRMA (PDF) DÜZELTİLDİ ---
   const handlePrint = () => {
     const content = document.getElementById('report-content');
     if (!content) return;
@@ -607,7 +666,7 @@ const App = () => {
                        <button type="button" onClick={(e) => handleCopyLink(e, exam)} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-indigo-500 hover:bg-indigo-50" title="Kodu ve Linki Kopyala"><IconLink size={18}/></button>
                        <button type="button" onClick={(e) => { e.stopPropagation(); showModal("Sil", "Bu sınav kalıcı olarak silinecek. Emin misiniz?", "confirm", () => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id))); }} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-red-500 hover:bg-red-50" title="Sil"><IconTrash2 size={18}/></button>
                     </div>
-                    <button type="button" onClick={() => { setActiveExam(exam); setView('analytics'); }} className="text-left w-full h-full pt-8 lg:pt-0 pr-0 lg:pr-10">
+                    <button type="button" onClick={() => { setActiveExam(exam); setView('analytics'); setSelectedSubs([]); }} className="text-left w-full h-full pt-8 lg:pt-0 pr-0 lg:pr-10">
                       <h3 className="font-black text-lg sm:text-2xl mb-2 line-clamp-2 sm:line-clamp-1 uppercase text-indigo-900 tracking-tight">{exam.title}</h3>
                       <p className="text-xs sm:text-sm font-bold text-indigo-500 mb-4 sm:mb-6 bg-indigo-50 inline-block px-2 sm:px-3 py-1 rounded-md sm:rounded-lg border border-indigo-100">KOD: {exam.examCode}</p>
                       
@@ -733,7 +792,7 @@ const App = () => {
           </div>
         )}
 
-        {/* --- YÖNETİCİ ANALİZ PANELİ --- */}
+        {/* --- YÖNETİCİ ANALİZ PANELİ (Tümünü Sil ve Tekil Silme Özelliği Eklendi) --- */}
         {view === 'analytics' && activeExam && (
           <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
@@ -756,19 +815,56 @@ const App = () => {
                     </div>
                  </div>
                  <div className="md:col-span-8 bg-white rounded-2xl sm:rounded-[4rem] shadow-sm border border-slate-100 overflow-hidden flex flex-col">
-                    <div className="p-5 sm:p-8 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0"><h3 className="font-black text-lg sm:text-xl uppercase tracking-tighter text-slate-800 flex items-center gap-2"><IconUser size={20} className="text-indigo-500"/> Katılımcı Listesi</h3><span className="text-[9px] sm:text-[10px] font-black bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1 sm:py-1.5 rounded-md sm:rounded-full uppercase tracking-widest border border-indigo-100">{submissions.filter(s=>s.examId===activeExam.id).length} Kişi</span></div>
+                    <div className="p-5 sm:p-8 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                        <h3 className="font-black text-lg sm:text-xl uppercase tracking-tighter text-slate-800 flex items-center gap-2"><IconUser size={20} className="text-indigo-500"/> Katılımcı Listesi</h3>
+                        <div className="flex items-center gap-2 sm:gap-4">
+                            <span className="text-[9px] sm:text-[10px] font-black bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1 sm:py-1.5 rounded-md sm:rounded-full uppercase tracking-widest border border-indigo-100">{submissions.filter(s=>s.examId===activeExam.id).length} Kişi</span>
+                            
+                            {selectedSubs.length > 0 && (
+                                <button type="button" onClick={handleDeleteSelected} className="text-[9px] sm:text-[10px] font-black bg-red-500 text-white hover:bg-red-600 px-3 sm:px-4 py-1 sm:py-1.5 rounded-md sm:rounded-full uppercase tracking-widest transition-colors flex items-center gap-1 print:hidden shadow-sm">
+                                    <IconTrash2 size={12}/> Seçilenleri Sil ({selectedSubs.length})
+                                </button>
+                            )}
+
+                            {submissions.filter(s=>s.examId===activeExam.id).length > 0 && selectedSubs.length === 0 && (
+                                <button type="button" onClick={() => handleDeleteAllSubmissions(activeExam.id)} className="text-[9px] sm:text-[10px] font-black bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-3 sm:px-4 py-1 sm:py-1.5 rounded-md sm:rounded-full uppercase tracking-widest border border-red-100 transition-colors flex items-center gap-1 print:hidden">
+                                    <IconTrash2 size={12}/> Tümünü Sil
+                                </button>
+                            )}
+                        </div>
+                    </div>
                     <div className="overflow-x-auto flex-1">
                         <table className="w-full text-left whitespace-nowrap min-w-[600px]">
-                            <thead className="bg-slate-50 border-b uppercase text-[8px] sm:text-[10px] font-black text-slate-400 tracking-widest"><tr><th className="p-4 sm:p-6 font-bold">Öğrenci Bilgileri</th><th className="p-4 sm:p-6 text-center font-bold">Doğru / Toplam</th><th className="p-4 sm:p-6 text-center font-bold">Puan</th><th className="p-4 sm:p-6 text-center font-bold text-red-400">İhlal</th><th className="p-4 sm:p-6 text-center font-bold">Tarih / Saat</th></tr></thead>
+                            <thead className="bg-slate-50 border-b uppercase text-[8px] sm:text-[10px] font-black text-slate-400 tracking-widest">
+                                <tr>
+                                    <th className="p-4 sm:p-6 font-bold">Öğrenci Bilgileri</th>
+                                    <th className="p-4 sm:p-6 text-center font-bold">Doğru / Toplam</th>
+                                    <th className="p-4 sm:p-6 text-center font-bold">Puan</th>
+                                    <th className="p-4 sm:p-6 text-center font-bold text-red-400">İhlal</th>
+                                    <th className="p-4 sm:p-6 text-center font-bold">Tarih / Saat</th>
+                                    <th className="p-4 sm:p-6 text-center font-bold text-slate-300 print:hidden flex items-center justify-center gap-2">
+                                        <span>Seç</span>
+                                        <input type="checkbox" checked={selectedSubs.length === submissions.filter(s=>s.examId===activeExam.id).length && submissions.filter(s=>s.examId===activeExam.id).length > 0} onChange={() => toggleAllSubs(submissions.filter(s=>s.examId===activeExam.id))} className="w-4 h-4 cursor-pointer accent-indigo-600" />
+                                    </th>
+                                </tr>
+                            </thead>
                             <tbody className="divide-y divide-slate-100 font-bold sm:font-black text-slate-800">
-                                {submissions.filter(s=>s.examId===activeExam.id).length === 0 && <tr><td colSpan="5" className="p-10 text-center text-slate-300 text-sm">Henüz sınava giren öğrenci yok.</td></tr>}
+                                {submissions.filter(s=>s.examId===activeExam.id).length === 0 && <tr><td colSpan="6" className="p-10 text-center text-slate-300 text-sm">Henüz sınava giren öğrenci yok.</td></tr>}
                                 {submissions.filter(s=>s.examId===activeExam.id).map((sub, i) => (
-                                    <tr key={i} className="hover:bg-indigo-50/30 transition-colors">
+                                    <tr key={i} className={"transition-colors " + (selectedSubs.includes(sub.id) ? 'bg-indigo-50/50' : 'hover:bg-indigo-50/30')}>
                                         <td className="p-4 sm:p-6"><div className="text-base sm:text-xl tracking-tight uppercase text-indigo-900 mb-0.5">{sub.studentName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Numara: {sub.studentNumber}</div></td>
                                         <td className="p-4 sm:p-6 text-center text-slate-500 font-mono text-sm sm:text-base">{sub.correctCount} <span className="text-slate-300">/</span> {sub.totalQuestions}</td>
                                         <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 sm:px-5 py-1 sm:py-1.5 bg-white border-2 sm:border-4 rounded-full text-xs sm:text-sm shadow-sm font-black " + (Number(sub.score) >= 50 ? 'border-green-100 text-green-600' : 'border-red-100 text-red-500')}>{Number(sub.score).toFixed(0)}</span></td>
                                         <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 py-1 bg-white border rounded-full text-xs font-black " + ((sub.cheatWarnings || 0) > 0 ? 'border-red-200 text-red-600' : 'border-slate-100 text-slate-300')}>{sub.cheatWarnings || 0} Kez</span></td>
                                         <td className="p-4 sm:p-6 text-center text-xs sm:text-sm text-slate-500 font-bold">{sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '-'}</td>
+                                        <td className="p-4 sm:p-6 text-center print:hidden">
+                                            <div className="flex items-center justify-center gap-3">
+                                                <input type="checkbox" checked={selectedSubs.includes(sub.id)} onChange={() => toggleSubSelection(sub.id)} className="w-5 h-5 cursor-pointer accent-indigo-600 shadow-sm" />
+                                                <button type="button" onClick={() => handleDeleteSubmission(sub.id)} className="p-2 bg-white border border-slate-100 rounded-lg text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all shadow-sm" title="Bu öğrenciyi sil">
+                                                    <IconTrash2 size={16}/>
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -788,8 +884,11 @@ const App = () => {
                                           <h4 className="font-black text-xl sm:text-2xl text-indigo-900 uppercase tracking-tight">{sub.studentName}</h4>
                                           <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mt-1 flex flex-wrap items-center gap-1">Öğrenci No: {sub.studentNumber} • PUAN: {Number(sub.score).toFixed(0)} • KURAL İHLALİ: {sub.cheatWarnings || 0} • TARİH: {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '-'}</p>
                                       </div>
-                                      <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                                      <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 flex items-center justify-between gap-4">
                                           <p className="text-xs sm:text-sm font-black text-slate-700">{sub.correctCount} Doğru <span className="text-slate-300 mx-1">/</span> {sub.totalQuestions} Soru</p>
+                                          <button type="button" onClick={() => handleDeleteSubmission(sub.id)} className="p-1.5 sm:p-2 bg-white border border-slate-200 rounded-md text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all print:hidden" title="Bu öğrencinin sonucunu sil">
+                                              <IconTrash2 size={14}/>
+                                          </button>
                                       </div>
                                   </div>
                                   <div className="space-y-4 sm:space-y-6">
@@ -820,7 +919,7 @@ const App = () => {
           </div>
         )}
 
-        {/* --- ÖĞRENCİ KOD GİRİŞ EKRANI --- */}
+        {/* ÖĞRENCİ KOD GİRİŞ EKRANI */}
         {view === 'student' && (
           <div className="max-w-lg mx-auto py-6 sm:py-12 animate-in fade-in zoom-in duration-500 no-print px-4">
              <div className="bg-white p-8 sm:p-12 md:p-16 rounded-3xl sm:rounded-[4rem] shadow-xl sm:shadow-2xl border border-slate-100 text-center relative overflow-hidden">
@@ -846,7 +945,7 @@ const App = () => {
           </div>
         )}
 
-        {/* --- ÖĞRENCİ SINAV SONUÇ / KARNE EKRANI --- */}
+        {/* ÖĞRENCİ SINAV SONUÇ / KARNE EKRANI */}
         {view === 'result' && examResult && (
           <div className="max-w-3xl mx-auto py-6 sm:py-12 animate-in slide-in-from-bottom-8 no-print px-4">
              <div className="bg-white p-8 sm:p-16 rounded-3xl sm:rounded-[4rem] shadow-xl sm:shadow-2xl border border-slate-100 text-center relative overflow-hidden">
@@ -894,7 +993,7 @@ const App = () => {
           </div>
         )}
 
-        {/* --- YENİ: KOPYA KORUMALI AKTİF SINAV EKRANI --- */}
+        {/* KOPYA KORUMALI AKTİF SINAV EKRANI */}
         {view === 'exam' && activeExam && (
           <div 
             className="max-w-4xl mx-auto pb-20 sm:pb-32 animate-in slide-in-from-right no-print select-none"
