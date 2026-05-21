@@ -206,7 +206,8 @@ const App = () => {
     if (!currentKey) throw new Error("Lütfen 'AI Sihirbazı' panelindeki kutucuğa Google Gemini API Anahtarınızı girin.");
     if (currentKey === firebaseConfig.apiKey) throw new Error("DİKKAT: Kutucuğa yapay zeka yerine FIREBASE şifrenizi girdiniz! Lütfen aistudio.google.com adresinden YENİ bir anahtar alıp kutucuğa yapıştırın.");
 
-    const modelsToTry = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5-flash-8b", "gemini-pro"];
+    // YENİ: Yedek modeller en güncel Google sürümleriyle değiştirildi
+    const modelsToTry = ["gemini-2.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro-latest", "gemini-1.0-pro", "gemini-pro"];
     let errorLogs = [];
 
     for (const model of modelsToTry) {
@@ -247,6 +248,16 @@ const App = () => {
             errorLogs.push(`[${model}]: ${err.message}`);
         }
     }
+    
+    // YENİ: Kullanıcı Dostu Hata Mesajı Yönetimi
+    const combinedErrors = errorLogs.join(' ');
+    if (combinedErrors.includes('high demand') || combinedErrors.includes('503')) {
+        throw new Error("⏳ Google Yapay Zeka sunucularında şu an aşırı yoğunluk yaşanıyor. Lütfen 10-15 saniye bekleyip tekrar 'OLUŞTUR' butonuna basın.");
+    }
+    if (combinedErrors.includes('not found') || combinedErrors.includes('supported')) {
+        throw new Error("Kullandığınız API Anahtarı mevcut modellere erişemiyor. Lütfen Google AI Studio üzerinden yeni bir ücretsiz anahtar oluşturup sisteme yapıştırın.");
+    }
+
     throw new Error(`Google API Bağlantısı Başarısız Oldu.\n\nDetaylı Hata Kaydı:\n${errorLogs.join('\n\n')}`);
   }
 
@@ -388,6 +399,9 @@ const App = () => {
 
       // YENİ KURAL: Yapay zekanın dili zorla Türkçeye çevirmesini engeller.
       instruction += `\nÖNEMLİ KURAL: Ekli dosyanın veya metnin orijinal dilini (İngilizce, Almanca, Türkçe vb.) tespit et ve soruları KESİNLİKLE METNİN ORİJİNAL DİLİNDE HAZIRLA. Metin İngilizce ise sorular ve şıklar İngilizce olmalı. Asla çeviri yapma!`;
+
+      // YENİ KURAL: Görsel Referans Yasağı
+      instruction += `\nÇOK ÖNEMLİ KURAL (GÖRSEL YASAĞI): Okuduğun PDF veya metindeki resimlere, grafiklere, tablolara veya numaralandırılmış görsellere atıfta bulunan ("Yukarıdaki görsele göre", "Şekil 1'de...", "Resimdeki" gibi) sorular KESİNLİKLE ÜRETME! Öğrenciler o görselleri göremeyecek. SADECE metinden, mantıktan veya genel kültürden çözülebilecek, görsele ihtiyaç duymayan sorular üret!`;
 
       if (uploadData && uploadType === 'application/pdf' && pageRange.trim()) { 
           instruction += `\nÖNEMLİ DİKKAT: Ekli PDF dosyasının SADECE şu sayfalarındaki veya şu kısımlarındaki bilgileri kullanarak soru üret: "${pageRange}"`; 
@@ -783,8 +797,8 @@ const App = () => {
       <main className="max-w-6xl w-full mx-auto p-4 md:p-8 flex-1">
         {view === 'landing' && (
           <div className="text-center py-10 sm:py-20 animate-in fade-in zoom-in print:hidden px-4">
-            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] sm:leading-[0.9] tracking-tighter uppercase text-slate-900">HİSAR AİHL <br/><span className="text-indigo-600 underline decoration-indigo-200 decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8 mt-2 inline-block">Akıllı Sınav</span></h2>
-            <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-4">SINAVDA BAŞARILAR <br/>Uğur ISKIN<br/>Bilgisayar Öğretmeni</p>
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] sm:leading-[0.9] tracking-tighter uppercase text-slate-900">Bulut Tabanlı <br/><span className="text-indigo-600 underline decoration-indigo-200 decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8 mt-2 inline-block">Akıllı Sınav</span></h2>
+            <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-4">Öğrencileriniz için hesap gerekmez. Sınavları AI ile hazırlayın, özel sınav koduyla güvenle paylaşın.</p>
             <button type="button" onClick={() => setView('student')} className="bg-indigo-600 text-white px-8 sm:px-12 py-4 sm:py-6 rounded-full sm:rounded-[3rem] font-black text-lg sm:text-2xl hover:scale-105 active:scale-95 transition-all shadow-xl sm:shadow-2xl flex items-center justify-center gap-3 sm:gap-4 mx-auto w-full sm:w-auto max-w-sm shadow-indigo-200"><IconUser size={28}/> SINAVA BAŞLA</button>
           </div>
         )}
@@ -907,7 +921,14 @@ const App = () => {
                         {editingQIdx !== null ? `${editingQIdx + 1}. Soruyu Düzenle` : 'Manuel Soru Ekle'}
                     </h3>
                     <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-4 scrollbar-hide">{['multiple-choice','true-false','short-answer','matching'].map(t=><button type="button" key={t} onClick={()=>setCurrentQuestion({...currentQuestion,type:t})} className={"px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[8px] sm:text-[10px] font-black uppercase border-2 sm:border-4 transition-all whitespace-nowrap shrink-0 " + (currentQuestion.type===t?'bg-indigo-600 text-white border-indigo-600 shadow-md':'bg-white text-slate-400 border-slate-200 hover:border-indigo-300')}>{t==='multiple-choice'?'Çoktan Seçmeli':t==='true-false'?'Doğru / Yanlış':t==='short-answer'?'Kısa Cevap':'Eşleştirme'}</button>)}</div>
+                    
                     <textarea className="w-full p-4 sm:p-6 bg-white rounded-xl sm:rounded-[2rem] shadow-sm outline-none font-bold sm:font-black text-sm sm:text-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-slate-300 min-h-[100px]" placeholder="Soru metni..." value={currentQuestion.text} onChange={e=>setCurrentQuestion({...currentQuestion, text:e.target.value})} />
+                    
+                    {/* YENİ: Manuel Görsel Ekleme Input'u */}
+                    <div className="flex items-center gap-2 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm focus-within:border-indigo-500 transition-all">
+                        <IconImage size={18} className="text-slate-400" />
+                        <input className="w-full font-bold text-xs sm:text-sm outline-none bg-transparent placeholder:text-slate-300" placeholder="İsteğe Bağlı Görsel: İnternetteki bir resmin linkini yapıştırın (https://...jpg)" value={currentQuestion.imageUrl || ''} onChange={e=>setCurrentQuestion({...currentQuestion, imageUrl:e.target.value})} />
+                    </div>
                     
                     {currentQuestion.type === 'multiple-choice' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">{currentQuestion.options.map((opt,i)=><div key={i} className={"flex items-center gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-colors " + (currentQuestion.correct===i ? 'border-indigo-500 bg-indigo-50' : 'border-slate-100')}><input type="radio" checked={currentQuestion.correct===i} onChange={()=>setCurrentQuestion({...currentQuestion, correct:i})} className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" /><input className="w-full font-bold text-sm sm:text-base outline-none bg-transparent placeholder:text-slate-300" placeholder={String.fromCharCode(65+i) + " Şıkkı"} value={opt} onChange={e=>{const o=[...currentQuestion.options];o[i]=e.target.value;setCurrentQuestion({...currentQuestion,options:o});}} /></div>)}</div>}
                     
