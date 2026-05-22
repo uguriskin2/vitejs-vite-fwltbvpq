@@ -766,7 +766,7 @@ const App = () => {
         <div className="flex items-center gap-2 font-black text-xl sm:text-2xl text-indigo-600 cursor-pointer" onClick={() => { setView('landing'); setExamResult(null); }}>
           <div className="bg-indigo-600 p-1.5 rounded-lg text-white shadow-lg"><IconTarget size={24}/></div>
           <div className="flex flex-col">
-            <span>SINAV<span className="text-slate-800">AI</span></span>
+            <span>SINAV<span className="text-slate-800">UI</span></span>
             <span className="text-[9px] text-slate-400 font-bold tracking-widest lowercase -mt-1 hidden sm:block">uguriskin@gmail.com</span>
           </div>
         </div>
