@@ -47,8 +47,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = 'pro-sinav-cloud-v5';
 
-// DİKKAT: Kendi Gemini API Anahtarınızı Buraya Yapıştırın!
-const apiKey = ""; 
+// API Anahtarı (Kullanıcının En Son Eklediği Anahtar)
+const apiKey = "AIzaSyC2MoW4mx8hnmJBgcLW4fCF4inv4hXbWBo"; 
 
 const getInitialQuestion = () => ({ 
   text: '', 
@@ -206,7 +206,6 @@ const App = () => {
     if (!currentKey) throw new Error("Lütfen 'AI Sihirbazı' panelindeki kutucuğa Google Gemini API Anahtarınızı girin.");
     if (currentKey === firebaseConfig.apiKey) throw new Error("DİKKAT: Kutucuğa yapay zeka yerine FIREBASE şifrenizi girdiniz! Lütfen aistudio.google.com adresinden YENİ bir anahtar alıp kutucuğa yapıştırın.");
 
-    // YENİ: Yedek modeller en güncel Google sürümleriyle değiştirildi
     const modelsToTry = ["gemini-2.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro-latest", "gemini-1.0-pro", "gemini-pro"];
     let errorLogs = [];
 
@@ -248,8 +247,7 @@ const App = () => {
             errorLogs.push(`[${model}]: ${err.message}`);
         }
     }
-    
-    // YENİ: Kullanıcı Dostu Hata Mesajı Yönetimi
+
     const combinedErrors = errorLogs.join(' ');
     if (combinedErrors.includes('high demand') || combinedErrors.includes('503')) {
         throw new Error("⏳ Google Yapay Zeka sunucularında şu an aşırı yoğunluk yaşanıyor. Lütfen 10-15 saniye bekleyip tekrar 'OLUŞTUR' butonuna basın.");
@@ -257,7 +255,7 @@ const App = () => {
     if (combinedErrors.includes('not found') || combinedErrors.includes('supported')) {
         throw new Error("Kullandığınız API Anahtarı mevcut modellere erişemiyor. Lütfen Google AI Studio üzerinden yeni bir ücretsiz anahtar oluşturup sisteme yapıştırın.");
     }
-
+    
     throw new Error(`Google API Bağlantısı Başarısız Oldu.\n\nDetaylı Hata Kaydı:\n${errorLogs.join('\n\n')}`);
   }
 
@@ -397,10 +395,8 @@ const App = () => {
       const typeStr = aiConfig.types.join(", ");
       let instruction = `Sen profesyonel bir sınav hazırlayıcısın. Görevin verilen metinden veya ekli dosyadan tam olarak ${aiConfig.count} adet soru üretmektir. İstenilen soru türleri: ${typeStr}.`;
 
-      // YENİ KURAL: Yapay zekanın dili zorla Türkçeye çevirmesini engeller.
       instruction += `\nÖNEMLİ KURAL: Ekli dosyanın veya metnin orijinal dilini (İngilizce, Almanca, Türkçe vb.) tespit et ve soruları KESİNLİKLE METNİN ORİJİNAL DİLİNDE HAZIRLA. Metin İngilizce ise sorular ve şıklar İngilizce olmalı. Asla çeviri yapma!`;
 
-      // YENİ KURAL: Görsel Referans Yasağı
       instruction += `\nÇOK ÖNEMLİ KURAL (GÖRSEL YASAĞI): Okuduğun PDF veya metindeki resimlere, grafiklere, tablolara veya numaralandırılmış görsellere atıfta bulunan ("Yukarıdaki görsele göre", "Şekil 1'de...", "Resimdeki" gibi) sorular KESİNLİKLE ÜRETME! Öğrenciler o görselleri göremeyecek. SADECE metinden, mantıktan veya genel kültürden çözülebilecek, görsele ihtiyaç duymayan sorular üret!`;
 
       if (uploadData && uploadType === 'application/pdf' && pageRange.trim()) { 
@@ -766,7 +762,7 @@ const App = () => {
         <div className="flex items-center gap-2 font-black text-xl sm:text-2xl text-indigo-600 cursor-pointer" onClick={() => { setView('landing'); setExamResult(null); }}>
           <div className="bg-indigo-600 p-1.5 rounded-lg text-white shadow-lg"><IconTarget size={24}/></div>
           <div className="flex flex-col">
-            <span>SINAV<span className="text-slate-800">UI</span></span>
+            <span>SINAV<span className="text-slate-800">AI</span></span>
             <span className="text-[9px] text-slate-400 font-bold tracking-widest lowercase -mt-1 hidden sm:block">uguriskin@gmail.com</span>
           </div>
         </div>
@@ -797,8 +793,8 @@ const App = () => {
       <main className="max-w-6xl w-full mx-auto p-4 md:p-8 flex-1">
         {view === 'landing' && (
           <div className="text-center py-10 sm:py-20 animate-in fade-in zoom-in print:hidden px-4">
-            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] sm:leading-[0.9] tracking-tighter uppercase text-slate-900">HİSAR AİHL <br/><span className="text-indigo-600 underline decoration-indigo-200 decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8 mt-2 inline-block">Akıllı Sınav</span></h2>
-            <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-4">Sınavda Başarılar Diliyorum.<br/>Uğur ISKIN <br/>Bilgisayar Öğretmeni</p>
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] sm:leading-[0.9] tracking-tighter uppercase text-slate-900">Bulut Tabanlı <br/><span className="text-indigo-600 underline decoration-indigo-200 decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8 mt-2 inline-block">Akıllı Sınav</span></h2>
+            <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-4">Öğrencileriniz için hesap gerekmez. Sınavları AI ile hazırlayın, özel sınav koduyla güvenle paylaşın.</p>
             <button type="button" onClick={() => setView('student')} className="bg-indigo-600 text-white px-8 sm:px-12 py-4 sm:py-6 rounded-full sm:rounded-[3rem] font-black text-lg sm:text-2xl hover:scale-105 active:scale-95 transition-all shadow-xl sm:shadow-2xl flex items-center justify-center gap-3 sm:gap-4 mx-auto w-full sm:w-auto max-w-sm shadow-indigo-200"><IconUser size={28}/> SINAVA BAŞLA</button>
           </div>
         )}
@@ -924,7 +920,6 @@ const App = () => {
                     
                     <textarea className="w-full p-4 sm:p-6 bg-white rounded-xl sm:rounded-[2rem] shadow-sm outline-none font-bold sm:font-black text-sm sm:text-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-slate-300 min-h-[100px]" placeholder="Soru metni..." value={currentQuestion.text} onChange={e=>setCurrentQuestion({...currentQuestion, text:e.target.value})} />
                     
-                    {/* YENİ: Manuel Görsel Ekleme Input'u */}
                     <div className="flex items-center gap-2 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm focus-within:border-indigo-500 transition-all">
                         <IconImage size={18} className="text-slate-400" />
                         <input className="w-full font-bold text-xs sm:text-sm outline-none bg-transparent placeholder:text-slate-300" placeholder="İsteğe Bağlı Görsel: İnternetteki bir resmin linkini yapıştırın (https://...jpg)" value={currentQuestion.imageUrl || ''} onChange={e=>setCurrentQuestion({...currentQuestion, imageUrl:e.target.value})} />
@@ -978,7 +973,7 @@ const App = () => {
           </div>
         )}
 
-        {/* --- YÖNETİCİ ANALİZ PANELİ --- */}
+        {/* --- YÖNETİCİ ANALİZ PANELİ (Seçim Kutuları En Başa Alındı) --- */}
         {view === 'analytics' && activeExam && (
           <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
@@ -1023,34 +1018,38 @@ const App = () => {
                         <table className="w-full text-left whitespace-nowrap min-w-[600px]">
                             <thead className="bg-slate-50 border-b uppercase text-[8px] sm:text-[10px] font-black text-slate-400 tracking-widest">
                                 <tr>
+                                    {/* YENİ: Seç sütunu en başa alındı */}
+                                    <th className="p-4 sm:p-6 text-center font-bold text-slate-300 print:hidden w-16">
+                                        <div className="flex flex-col items-center justify-center gap-1">
+                                            <span>Seç</span>
+                                            <input type="checkbox" checked={selectedSubs.length === submissions.filter(s=>s.examId===activeExam.id).length && submissions.filter(s=>s.examId===activeExam.id).length > 0} onChange={() => toggleAllSubs(submissions.filter(s=>s.examId===activeExam.id))} className="w-4 h-4 cursor-pointer accent-indigo-600" />
+                                        </div>
+                                    </th>
                                     <th className="p-4 sm:p-6 font-bold">Öğrenci Bilgileri</th>
                                     <th className="p-4 sm:p-6 text-center font-bold">Doğru / Toplam</th>
                                     <th className="p-4 sm:p-6 text-center font-bold">Puan</th>
                                     <th className="p-4 sm:p-6 text-center font-bold text-red-400">İhlal</th>
                                     <th className="p-4 sm:p-6 text-center font-bold">Tarih / Saat</th>
-                                    <th className="p-4 sm:p-6 text-center font-bold text-slate-300 print:hidden flex items-center justify-center gap-2">
-                                        <span>Seç</span>
-                                        <input type="checkbox" checked={selectedSubs.length === submissions.filter(s=>s.examId===activeExam.id).length && submissions.filter(s=>s.examId===activeExam.id).length > 0} onChange={() => toggleAllSubs(submissions.filter(s=>s.examId===activeExam.id))} className="w-4 h-4 cursor-pointer accent-indigo-600" />
-                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 font-bold sm:font-black text-slate-800">
                                 {submissions.filter(s=>s.examId===activeExam.id).length === 0 && <tr><td colSpan="6" className="p-10 text-center text-slate-300 text-sm">Henüz sınava giren öğrenci yok.</td></tr>}
                                 {submissions.filter(s=>s.examId===activeExam.id).map((sub, i) => (
                                     <tr key={i} className={"transition-colors " + (selectedSubs.includes(sub.id) ? 'bg-indigo-50/50' : 'hover:bg-indigo-50/30')}>
+                                        {/* YENİ: Checkbox ve Silme Butonu en başa alındı */}
+                                        <td className="p-4 sm:p-6 text-center print:hidden w-16">
+                                            <div className="flex flex-col items-center justify-center gap-3">
+                                                <input type="checkbox" checked={selectedSubs.includes(sub.id)} onChange={() => toggleSubSelection(sub.id)} className="w-5 h-5 cursor-pointer accent-indigo-600 shadow-sm" />
+                                                <button type="button" onClick={() => handleDeleteSubmission(sub.id)} className="p-1.5 bg-white border border-slate-100 rounded-lg text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all shadow-sm" title="Bu öğrenciyi sil">
+                                                    <IconTrash2 size={14}/>
+                                                </button>
+                                            </div>
+                                        </td>
                                         <td className="p-4 sm:p-6"><div className="text-base sm:text-xl tracking-tight uppercase text-indigo-900 mb-0.5">{sub.studentName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Numara: {sub.studentNumber}</div></td>
                                         <td className="p-4 sm:p-6 text-center text-slate-500 font-mono text-sm sm:text-base">{Number(sub.correctCount).toFixed(1).replace('.0', '')} <span className="text-slate-300">/</span> {sub.totalQuestions}</td>
                                         <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 sm:px-5 py-1 sm:py-1.5 bg-white border-2 sm:border-4 rounded-full text-xs sm:text-sm shadow-sm font-black " + (Number(sub.score) >= 50 ? 'border-green-100 text-green-600' : 'border-red-100 text-red-500')}>{Number(sub.score).toFixed(0)}</span></td>
                                         <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 py-1 bg-white border rounded-full text-xs font-black " + ((sub.cheatWarnings || 0) > 0 ? 'border-red-200 text-red-600' : 'border-slate-100 text-slate-300')}>{sub.cheatWarnings || 0} Kez</span></td>
                                         <td className="p-4 sm:p-6 text-center text-xs sm:text-sm text-slate-500 font-bold">{sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '-'}</td>
-                                        <td className="p-4 sm:p-6 text-center print:hidden">
-                                            <div className="flex items-center justify-center gap-3">
-                                                <input type="checkbox" checked={selectedSubs.includes(sub.id)} onChange={() => toggleSubSelection(sub.id)} className="w-5 h-5 cursor-pointer accent-indigo-600 shadow-sm" />
-                                                <button type="button" onClick={() => handleDeleteSubmission(sub.id)} className="p-2 bg-white border border-slate-100 rounded-lg text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all shadow-sm" title="Bu öğrenciyi sil">
-                                                    <IconTrash2 size={16}/>
-                                                </button>
-                                            </div>
-                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
