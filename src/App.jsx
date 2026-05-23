@@ -1113,8 +1113,8 @@ const App = () => {
                 <div className="absolute top-0 left-0 w-full h-24 sm:h-32 bg-gradient-to-b from-indigo-50 to-transparent"></div>
                 <div className="bg-indigo-600 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl mx-auto flex items-center justify-center text-white mb-6 sm:mb-10 shadow-lg sm:shadow-2xl relative z-10 transform -rotate-3"><IconUser size={40} className="sm:w-12 sm:h-12"/></div>
                 
-                <h2 className="text-3xl sm:text-4xl font-black mb-2 sm:mb-4 uppercase tracking-tighter text-stone-900 relative z-10">Sınav Girişi</h2>
-                <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mb-8 sm:mb-10 relative z-10">Öğretmeninizin size verdiği kodu girin.</p>
+                <h2 className="text-3xl sm:text-4xl font-black mb-2 sm:mb-4 uppercase tracking-tighter text-stone-900 relative z-10">SINAV GİRİŞİ</h2>
+                <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mb-8 sm:mb-10 relative z-10">ÖĞRETMENİNİZİN SİZE VERDİĞİ KODU GİRİN.</p>
                 
                 <div className="space-y-3 sm:space-y-4 mb-8 sm:mb-10 relative z-10">
                     <input className="w-full p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-[2rem] text-center font-black text-lg sm:text-2xl shadow-inner outline-none focus:ring-2 sm:focus:ring-4 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all uppercase placeholder:text-slate-300" placeholder="AD SOYAD" value={studentName} onChange={e => setStudentName(e.target.value.toUpperCase())} />
