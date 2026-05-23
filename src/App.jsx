@@ -8,6 +8,7 @@ import {
   getAuth, signInAnonymously, onAuthStateChanged 
 } from 'firebase/auth';
 
+// --- İkonlar (Dış kütüphane çökmesini engellemek için doğrudan gömüldü) ---
 const IconTarget = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
 const IconLock = ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
 const IconLogOut = ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
@@ -118,6 +119,7 @@ const App = () => {
   
   const [studentName, setStudentName] = useState('');
   const [studentNumber, setStudentNumber] = useState('');
+  const [studentClass, setStudentClass] = useState(''); // YENİ: Öğrenci Sınıf/Şube State
   const [studentExamCode, setStudentExamCode] = useState(''); 
   const [answers, setAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(0);
@@ -475,9 +477,10 @@ const App = () => {
     }
   };
 
+  // YENİ: Sınavı Başlatma ve Sınıf Alanı Kontrolü
   const handleStudentStart = () => {
-    if(!studentName || !studentNumber || !studentExamCode) {
-        showModal("Eksik Bilgi", "Lütfen adınızı, numaranızı ve Sınav Kodunu eksiksiz girin.", "error");
+    if(!studentName || !studentNumber || !studentClass || !studentExamCode) {
+        showModal("Eksik Bilgi", "Lütfen adınızı, numaranızı, sınıfınızı ve Sınav Kodunu eksiksiz girin.", "error");
         return;
     }
     
@@ -579,8 +582,9 @@ const App = () => {
 
         const finalScorePercentage = (totalEarned / activeExam.questions.length) * 100;
 
+        // YENİ: Öğrencinin sınıf/şube bilgisi de eklendi
         const submissionData = {
-            examId: activeExam.id, studentName, studentNumber, deviceId,
+            examId: activeExam.id, studentName, studentNumber, studentClass, deviceId,
             score: finalScorePercentage, correctCount: totalEarned,
             totalQuestions: activeExam.questions.length, questionDetails, 
             submittedAt: new Date().toISOString(),
@@ -704,6 +708,7 @@ const App = () => {
   const handleExportExcel = () => {
     const examSubs = submissions.filter(s => s.examId === activeExam?.id);
     
+    // YENİ: Excel (XLS) formatında dışa aktarmak için HTML tablosu, Sınıf Sütunu eklendi
     let tableHtml = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
       <head>
@@ -729,6 +734,7 @@ const App = () => {
                   <tr>
                       <th style="background-color: #4f46e5; color: white;">Öğrenci Adı Soyadı</th>
                       <th style="background-color: #4f46e5; color: white;">Okul Numarası</th>
+                      <th style="background-color: #4f46e5; color: white;">Sınıf / Şube</th>
                       <th style="background-color: #4f46e5; color: white;">Doğru Soru Sayısı</th>
                       <th style="background-color: #4f46e5; color: white;">Toplam Puanı</th>
                       <th style="background-color: #4f46e5; color: white;">Sınav Tarihi ve Saati</th>
@@ -744,6 +750,7 @@ const App = () => {
             <tr>
                 <td>${s.studentName || '-'}</td>
                 <td>${s.studentNumber || '-'}</td>
+                <td>${s.studentClass || '-'}</td>
                 <td style="text-align: center;">${Number(s.correctCount).toFixed(1).replace('.0', '')}</td>
                 <td style="text-align: center; font-weight: bold;">${Number(s.score).toFixed(0)}</td>
                 <td>${s.submittedAt ? new Date(s.submittedAt).toLocaleString('tr-TR') : '-'}</td>
@@ -1027,7 +1034,7 @@ const App = () => {
           <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
               <div className="flex items-center gap-3 sm:gap-4"><button type="button" onClick={() => setView('teacher')} className="p-3 sm:p-4 bg-white rounded-xl sm:rounded-3xl text-slate-400 shadow-sm sm:shadow-xl border border-slate-100 hover:scale-105 active:scale-95 transition-all"><IconChevronLeft size={24}/></button><h2 className="text-2xl sm:text-4xl font-black text-stone-900 uppercase tracking-tight line-clamp-1">{activeExam.title}</h2></div>
-              <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto"><button type="button" onClick={handleExportExcel} className="flex-1 sm:flex-none justify-center bg-white text-indigo-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 border border-indigo-100 shadow-sm hover:bg-indigo-50 transition-all"><IconDownload size={16}/> EXCEL</button><button type="button" onClick={handlePrint} className="flex-1 sm:flex-none justify-center bg-slate-900 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 hover:bg-slate-800 shadow-md transition-all"><IconPrinter size={16}/> <span className="hidden sm:inline">YAZDIR /</span> PDF</button></div>
+              <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto"><button type="button" onClick={handleExportCSV} className="flex-1 sm:flex-none justify-center bg-white text-indigo-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 border border-indigo-100 shadow-sm hover:bg-indigo-50 transition-all"><IconDownload size={16}/> EXCEL</button><button type="button" onClick={handlePrint} className="flex-1 sm:flex-none justify-center bg-slate-900 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 hover:bg-slate-800 shadow-md transition-all"><IconPrinter size={16}/> <span className="hidden sm:inline">YAZDIR /</span> PDF</button></div>
             </div>
             
             <div id="report-content" className="space-y-6 sm:space-y-8 print:m-0 print:p-0">
@@ -1092,7 +1099,7 @@ const App = () => {
                                                 </button>
                                             </div>
                                         </td>
-                                        <td className="p-4 sm:p-6"><div className="text-base sm:text-xl tracking-tight uppercase text-indigo-900 mb-0.5">{sub.studentName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Numara: {sub.studentNumber}</div></td>
+                                        <td className="p-4 sm:p-6"><div className="text-base sm:text-xl tracking-tight uppercase text-indigo-900 mb-0.5">{sub.studentName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">Numara: {sub.studentNumber} • Sınıf: {sub.studentClass || '-'}</div></td>
                                         <td className="p-4 sm:p-6 text-center text-slate-500 font-mono text-sm sm:text-base">{Number(sub.correctCount).toFixed(1).replace('.0', '')} <span className="text-slate-300">/</span> {sub.totalQuestions}</td>
                                         <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 sm:px-5 py-1 sm:py-1.5 bg-white border-2 sm:border-4 rounded-full text-xs sm:text-sm shadow-sm font-black " + (Number(sub.score) >= 50 ? 'border-green-100 text-green-600' : 'border-red-100 text-red-500')}>{Number(sub.score).toFixed(0)}</span></td>
                                         <td className="p-4 sm:p-6 text-center"><span className={"inline-block px-3 py-1 bg-white border rounded-full text-xs font-black " + ((sub.cheatWarnings || 0) > 0 ? 'border-red-200 text-red-600' : 'border-slate-100 text-slate-300')}>{sub.cheatWarnings || 0} Kez</span></td>
@@ -1114,7 +1121,7 @@ const App = () => {
                                   <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b-2 border-slate-50 pb-4 sm:pb-6 mb-6 sm:mb-8 gap-4 sm:gap-0">
                                       <div>
                                           <h4 className="font-black text-xl sm:text-2xl text-indigo-900 uppercase tracking-tight">{sub.studentName}</h4>
-                                          <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mt-1 flex flex-wrap items-center gap-1">Öğrenci No: {sub.studentNumber} • PUAN: {Number(sub.score).toFixed(0)} • KURAL İHLALİ: {sub.cheatWarnings || 0} • TARİH: {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '-'}</p>
+                                          <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mt-1 flex flex-wrap items-center gap-1">Öğrenci No: {sub.studentNumber} • Sınıf: {sub.studentClass || '-'} • PUAN: {Number(sub.score).toFixed(0)} • KURAL İHLALİ: {sub.cheatWarnings || 0} • TARİH: {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '-'}</p>
                                       </div>
                                       <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 flex items-center justify-between gap-4">
                                           <p className="text-xs sm:text-sm font-black text-slate-700">{Number(sub.correctCount).toFixed(1).replace('.0', '')} Doğru Puan <span className="text-slate-300 mx-1">/</span> {sub.totalQuestions} Soru</p>
@@ -1165,7 +1172,11 @@ const App = () => {
                 
                 <div className="space-y-3 sm:space-y-4 mb-8 sm:mb-10 relative z-10">
                     <input className="w-full p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-[2rem] text-center font-black text-lg sm:text-2xl shadow-inner outline-none focus:ring-2 sm:focus:ring-4 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all uppercase placeholder:text-slate-300" placeholder="AD SOYAD" value={studentName} onChange={e => setStudentName(e.target.value.toUpperCase())} />
-                    <input className="w-full p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-[2rem] text-center font-black text-base sm:text-xl shadow-inner outline-none focus:ring-2 sm:focus:ring-4 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all uppercase tracking-widest placeholder:text-slate-300" placeholder="OKUL NUMARASI" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} />
+                    
+                    <div className="flex gap-3 sm:gap-4">
+                        <input className="w-full p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-[2rem] text-center font-black text-base sm:text-xl shadow-inner outline-none focus:ring-2 sm:focus:ring-4 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all uppercase tracking-widest placeholder:text-slate-300" placeholder="NUMARA" value={studentNumber} onChange={e => setStudentNumber(e.target.value)} />
+                        <input className="w-full p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-[2rem] text-center font-black text-base sm:text-xl shadow-inner outline-none focus:ring-2 sm:focus:ring-4 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all uppercase tracking-widest placeholder:text-slate-300" placeholder="SINIF/ŞUBE" value={studentClass} onChange={e => setStudentClass(e.target.value.toUpperCase())} />
+                    </div>
                     
                     <div className="pt-2 sm:pt-4">
                         <input className="w-full p-4 sm:p-6 bg-indigo-50 border-2 border-indigo-200 rounded-xl sm:rounded-[2rem] text-center font-black text-xl sm:text-3xl shadow-inner outline-none focus:border-indigo-500 focus:ring-2 sm:focus:ring-4 focus:ring-indigo-500/20 transition-all uppercase tracking-[0.2em] text-indigo-700 placeholder-indigo-300" placeholder="SINAV KODU" value={studentExamCode} onChange={e => setStudentExamCode(e.target.value.toUpperCase())} />
@@ -1240,7 +1251,7 @@ const App = () => {
              <div className="bg-slate-900 text-white p-6 sm:p-12 rounded-t-3xl sm:rounded-t-[5rem] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 sm:gap-0 sticky top-0 sm:top-20 z-40 shadow-2xl border-b-4 border-indigo-500/30">
                 <div>
                     <h2 className="text-xl sm:text-3xl font-black uppercase tracking-tight leading-tight text-indigo-300 mb-2">{activeExam.title}</h2>
-                    <div className="flex items-center gap-3"><div className="w-6 h-6 sm:w-8 sm:h-8 bg-white/10 rounded-full flex items-center justify-center"><IconUser size={12}/></div><p className="text-slate-300 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">{studentName} <span className="opacity-50 mx-1">|</span> {studentNumber}</p></div>
+                    <div className="flex items-center gap-3"><div className="w-6 h-6 sm:w-8 sm:h-8 bg-white/10 rounded-full flex items-center justify-center"><IconUser size={12}/></div><p className="text-slate-300 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">{studentName} <span className="opacity-50 mx-1">|</span> {studentNumber} <span className="opacity-50 mx-1">|</span> {studentClass}</p></div>
                 </div>
                 <div className={"w-full sm:w-auto flex justify-center sm:justify-start px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-2xl font-mono text-xl sm:text-2xl bg-black/40 items-center gap-2 sm:gap-3 border border-white/10 transition-colors shadow-inner " + (timeLeft < 60 ? 'text-red-400 bg-red-900/20 border-red-500/50 animate-pulse' : 'text-white')}><IconClock size={20} className="opacity-50" /> {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
              </div>
