@@ -47,7 +47,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = 'pro-sinav-cloud-v5';
 
-// API Anahtarı (Kullanıcının En Son Eklediği Anahtar)
+// API Anahtarı
 const apiKey = "AIzaSyC2MoW4mx8hnmJBgcLW4fCF4inv4hXbWBo"; 
 
 const getInitialQuestion = () => ({ 
@@ -707,13 +707,71 @@ const App = () => {
     }
   };
 
-  const handleExportCSV = () => {
+  // YENİ: Excel Çıktısı - Artık CSV değil, doğrudan HTML Table mantığıyla .xls / .html uzantılı Excel tablosu oluşturur
+  const handleExportExcel = () => {
     const examSubs = submissions.filter(s => s.examId === activeExam?.id);
-    let csv = "Ogrenci,Okul No,Cihaz ID,Puan,Tarih,Kural Ihlali\n";
-    examSubs.forEach(s => { csv += `${s.studentName},${s.studentNumber},${s.deviceId},${Number(s.score).toFixed(1)},${s.submittedAt},${s.cheatWarnings || 0}\n`; });
-    const blob = new Blob([csv], { type: 'text/csv' });
+    
+    // Excel'in tabloyu ve Türkçe karakterleri doğru tanıması için HTML yapısı kuruluyor
+    let tableHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+          <!--[if gte mso 9]>
+          <xml>
+              <x:ExcelWorkbook>
+                  <x:ExcelWorksheets>
+                      <x:ExcelWorksheet>
+                          <x:Name>Katilimcilar</x:Name>
+                          <x:WorksheetOptions>
+                              <x:DisplayGridlines/>
+                          </x:WorksheetOptions>
+                      </x:ExcelWorksheet>
+                  </x:ExcelWorksheets>
+              </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+      </head>
+      <body>
+          <table border="1">
+              <thead>
+                  <tr>
+                      <th style="background-color: #4f46e5; color: white;">Öğrenci Adı Soyadı</th>
+                      <th style="background-color: #4f46e5; color: white;">Okul Numarası</th>
+                      <th style="background-color: #4f46e5; color: white;">Doğru Soru Sayısı</th>
+                      <th style="background-color: #4f46e5; color: white;">Toplam Puanı</th>
+                      <th style="background-color: #4f46e5; color: white;">Sınav Tarihi ve Saati</th>
+                      <th style="background-color: #4f46e5; color: white;">Kural İhlali Sayısı</th>
+                      <th style="background-color: #4f46e5; color: white;">Cihaz ID</th>
+                  </tr>
+              </thead>
+              <tbody>
+    `;
+
+    examSubs.forEach(s => {
+        tableHtml += `
+            <tr>
+                <td>${s.studentName || '-'}</td>
+                <td>${s.studentNumber || '-'}</td>
+                <td style="text-align: center;">${Number(s.correctCount).toFixed(1).replace('.0', '')}</td>
+                <td style="text-align: center; font-weight: bold;">${Number(s.score).toFixed(0)}</td>
+                <td>${s.submittedAt ? new Date(s.submittedAt).toLocaleString('tr-TR') : '-'}</td>
+                <td style="text-align: center;">${s.cheatWarnings || 0}</td>
+                <td style="color: #666;">${s.deviceId || '-'}</td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `</tbody></table></body></html>`;
+
+    // Dosyayı oluştur ve indir
+    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = "Katilimci_Listesi.csv"; a.click();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Sinav_Sonuclari_${activeExam?.examCode || 'Liste'}.xls`; // Excel uzantısı verildi
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getTopicAnalysis = (examId) => {
@@ -762,7 +820,7 @@ const App = () => {
         <div className="flex items-center gap-2 font-black text-xl sm:text-2xl text-indigo-600 cursor-pointer" onClick={() => { setView('landing'); setExamResult(null); }}>
           <div className="bg-indigo-600 p-1.5 rounded-lg text-white shadow-lg"><IconTarget size={24}/></div>
           <div className="flex flex-col">
-            <span>SINAV<span className="text-slate-800">UI</span></span>
+            <span>SINAV<span className="text-slate-800">AI</span></span>
             <span className="text-[9px] text-slate-400 font-bold tracking-widest lowercase -mt-1 hidden sm:block">uguriskin@gmail.com</span>
           </div>
         </div>
@@ -793,8 +851,8 @@ const App = () => {
       <main className="max-w-6xl w-full mx-auto p-4 md:p-8 flex-1">
         {view === 'landing' && (
           <div className="text-center py-10 sm:py-20 animate-in fade-in zoom-in print:hidden px-4">
-            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] sm:leading-[0.9] tracking-tighter uppercase text-slate-900">HİSAR AİHL <br/><span className="text-indigo-600 underline decoration-indigo-200 decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8 mt-2 inline-block">Akıllı Sınav</span></h2>
-            <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-4">Sınavda Başarılar<br/>Uğur ISKIN<br/>Bilgisayar Öğretmeni</p>
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] sm:leading-[0.9] tracking-tighter uppercase text-slate-900">Bulut Tabanlı <br/><span className="text-indigo-600 underline decoration-indigo-200 decoration-4 sm:decoration-8 underline-offset-4 sm:underline-offset-8 mt-2 inline-block">Akıllı Sınav</span></h2>
+            <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-10 sm:mb-14 max-w-2xl mx-auto font-bold leading-relaxed px-4">Öğrencileriniz için hesap gerekmez. Sınavları AI ile hazırlayın, özel sınav koduyla güvenle paylaşın.</p>
             <button type="button" onClick={() => setView('student')} className="bg-indigo-600 text-white px-8 sm:px-12 py-4 sm:py-6 rounded-full sm:rounded-[3rem] font-black text-lg sm:text-2xl hover:scale-105 active:scale-95 transition-all shadow-xl sm:shadow-2xl flex items-center justify-center gap-3 sm:gap-4 mx-auto w-full sm:w-auto max-w-sm shadow-indigo-200"><IconUser size={28}/> SINAVA BAŞLA</button>
           </div>
         )}
@@ -973,12 +1031,12 @@ const App = () => {
           </div>
         )}
 
-        {/* --- YÖNETİCİ ANALİZ PANELİ (Seçim Kutuları En Başa Alındı) --- */}
+        {/* --- YÖNETİCİ ANALİZ PANELİ (Tümünü Sil ve Tekil Silme Özelliği Eklendi) --- */}
         {view === 'analytics' && activeExam && (
           <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
               <div className="flex items-center gap-3 sm:gap-4"><button type="button" onClick={() => setView('teacher')} className="p-3 sm:p-4 bg-white rounded-xl sm:rounded-3xl text-slate-400 shadow-sm sm:shadow-xl border border-slate-100 hover:scale-105 active:scale-95 transition-all"><IconChevronLeft size={24}/></button><h2 className="text-2xl sm:text-4xl font-black text-stone-900 uppercase tracking-tight line-clamp-1">{activeExam.title}</h2></div>
-              <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto"><button type="button" onClick={handleExportCSV} className="flex-1 sm:flex-none justify-center bg-white text-indigo-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 border border-indigo-100 shadow-sm hover:bg-indigo-50 transition-all"><IconDownload size={16}/> EXCEL</button><button type="button" onClick={handlePrint} className="flex-1 sm:flex-none justify-center bg-slate-900 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 hover:bg-slate-800 shadow-md transition-all"><IconPrinter size={16}/> <span className="hidden sm:inline">YAZDIR /</span> PDF</button></div>
+              <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto"><button type="button" onClick={handleExportCSV} className="flex-1 sm:flex-none justify-center bg-white text-indigo-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 border border-indigo-100 shadow-sm hover:bg-indigo-50 transition-all"><IconDownload size={16}/> YEDEKLE</button><button type="button" onClick={handlePrint} className="flex-1 sm:flex-none justify-center bg-slate-900 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 hover:bg-slate-800 shadow-md transition-all"><IconPrinter size={16}/> <span className="hidden sm:inline">YAZDIR /</span> PDF</button></div>
             </div>
             
             <div id="report-content" className="space-y-6 sm:space-y-8 print:m-0 print:p-0">
@@ -1018,7 +1076,6 @@ const App = () => {
                         <table className="w-full text-left whitespace-nowrap min-w-[600px]">
                             <thead className="bg-slate-50 border-b uppercase text-[8px] sm:text-[10px] font-black text-slate-400 tracking-widest">
                                 <tr>
-                                    {/* YENİ: Seç sütunu en başa alındı */}
                                     <th className="p-4 sm:p-6 text-center font-bold text-slate-300 print:hidden w-16">
                                         <div className="flex flex-col items-center justify-center gap-1">
                                             <span>Seç</span>
@@ -1036,7 +1093,6 @@ const App = () => {
                                 {submissions.filter(s=>s.examId===activeExam.id).length === 0 && <tr><td colSpan="6" className="p-10 text-center text-slate-300 text-sm">Henüz sınava giren öğrenci yok.</td></tr>}
                                 {submissions.filter(s=>s.examId===activeExam.id).map((sub, i) => (
                                     <tr key={i} className={"transition-colors " + (selectedSubs.includes(sub.id) ? 'bg-indigo-50/50' : 'hover:bg-indigo-50/30')}>
-                                        {/* YENİ: Checkbox ve Silme Butonu en başa alındı */}
                                         <td className="p-4 sm:p-6 text-center print:hidden w-16">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <input type="checkbox" checked={selectedSubs.includes(sub.id)} onChange={() => toggleSubSelection(sub.id)} className="w-5 h-5 cursor-pointer accent-indigo-600 shadow-sm" />
@@ -1058,6 +1114,7 @@ const App = () => {
                  </div>
               </div>
 
+              {/* PDF İÇİN DETAYLI ÖĞRENCİ CEVAP KAĞITLARI BÖLÜMÜ */}
               {submissions.filter(s=>s.examId===activeExam.id).length > 0 && (
                   <div className="pt-12 sm:pt-16 mt-8 sm:mt-12 border-t-2 border-dashed border-slate-200">
                       <h3 className="font-black text-2xl sm:text-3xl uppercase tracking-tighter text-slate-800 mb-8 sm:mb-10 text-center print:text-left print:mt-10">Öğrenci Cevap Kağıtları</h3>
@@ -1113,8 +1170,8 @@ const App = () => {
                 <div className="absolute top-0 left-0 w-full h-24 sm:h-32 bg-gradient-to-b from-indigo-50 to-transparent"></div>
                 <div className="bg-indigo-600 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl mx-auto flex items-center justify-center text-white mb-6 sm:mb-10 shadow-lg sm:shadow-2xl relative z-10 transform -rotate-3"><IconUser size={40} className="sm:w-12 sm:h-12"/></div>
                 
-                <h2 className="text-3xl sm:text-4xl font-black mb-2 sm:mb-4 uppercase tracking-tighter text-stone-900 relative z-10">SINAV GİRİŞİ</h2>
-                <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mb-8 sm:mb-10 relative z-10">ÖĞRETMENİNİZİN SİZE VERDİĞİ KODU GİRİN.</p>
+                <h2 className="text-3xl sm:text-4xl font-black mb-2 sm:mb-4 uppercase tracking-tighter text-stone-900 relative z-10">Sınav Girişi</h2>
+                <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mb-8 sm:mb-10 relative z-10">Öğretmeninizin size verdiği kodu girin.</p>
                 
                 <div className="space-y-3 sm:space-y-4 mb-8 sm:mb-10 relative z-10">
                     <input className="w-full p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-[2rem] text-center font-black text-lg sm:text-2xl shadow-inner outline-none focus:ring-2 sm:focus:ring-4 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all uppercase placeholder:text-slate-300" placeholder="AD SOYAD" value={studentName} onChange={e => setStudentName(e.target.value.toUpperCase())} />
