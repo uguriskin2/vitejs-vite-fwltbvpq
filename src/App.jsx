@@ -8,7 +8,6 @@ import {
   getAuth, signInAnonymously, onAuthStateChanged 
 } from 'firebase/auth';
 
-// --- İkonlar (Dış kütüphane çökmesini engellemek için doğrudan gömüldü) ---
 const IconTarget = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
 const IconLock = ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
 const IconLogOut = ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
@@ -32,7 +31,6 @@ const IconActivitySmall = ({size=32, className=""}) => <svg className={className
 const IconFileText = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
 const IconImage = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
 
-// --- Firebase Yapılandırması ---
 const firebaseConfig = {
   apiKey: "AIzaSyDLcdpVEUHpaUP2IgMuYeszaHmmhODcHH8",
   authDomain: "online-sinav-2026.firebaseapp.com",
@@ -46,9 +44,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = 'pro-sinav-cloud-v5';
-
-// API Anahtarı
-const apiKey = "AIzaSyC2MoW4mx8hnmJBgcLW4fCF4inv4hXbWBo"; 
 
 const getInitialQuestion = () => ({ 
   text: '', 
@@ -396,7 +391,6 @@ const App = () => {
       let instruction = `Sen profesyonel bir sınav hazırlayıcısın. Görevin verilen metinden veya ekli dosyadan tam olarak ${aiConfig.count} adet soru üretmektir. İstenilen soru türleri: ${typeStr}.`;
 
       instruction += `\nÖNEMLİ KURAL: Ekli dosyanın veya metnin orijinal dilini (İngilizce, Almanca, Türkçe vb.) tespit et ve soruları KESİNLİKLE METNİN ORİJİNAL DİLİNDE HAZIRLA. Metin İngilizce ise sorular ve şıklar İngilizce olmalı. Asla çeviri yapma!`;
-
       instruction += `\nÇOK ÖNEMLİ KURAL (GÖRSEL YASAĞI): Okuduğun PDF veya metindeki resimlere, grafiklere, tablolara veya numaralandırılmış görsellere atıfta bulunan ("Yukarıdaki görsele göre", "Şekil 1'de...", "Resimdeki" gibi) sorular KESİNLİKLE ÜRETME! Öğrenciler o görselleri göremeyecek. SADECE metinden, mantıktan veya genel kültürden çözülebilecek, görsele ihtiyaç duymayan sorular üret!`;
 
       if (uploadData && uploadType === 'application/pdf' && pageRange.trim()) { 
@@ -707,11 +701,9 @@ const App = () => {
     }
   };
 
-  // YENİ: Excel Çıktısı - Artık CSV değil, doğrudan HTML Table mantığıyla .xls / .html uzantılı Excel tablosu oluşturur
   const handleExportExcel = () => {
     const examSubs = submissions.filter(s => s.examId === activeExam?.id);
     
-    // Excel'in tabloyu ve Türkçe karakterleri doğru tanıması için HTML yapısı kuruluyor
     let tableHtml = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
       <head>
@@ -763,12 +755,11 @@ const App = () => {
 
     tableHtml += `</tbody></table></body></html>`;
 
-    // Dosyayı oluştur ve indir
     const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Sinav_Sonuclari_${activeExam?.examCode || 'Liste'}.xls`; // Excel uzantısı verildi
+    link.download = `Sinav_Sonuclari_${activeExam?.examCode || 'Liste'}.xls`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1036,7 +1027,7 @@ const App = () => {
           <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
               <div className="flex items-center gap-3 sm:gap-4"><button type="button" onClick={() => setView('teacher')} className="p-3 sm:p-4 bg-white rounded-xl sm:rounded-3xl text-slate-400 shadow-sm sm:shadow-xl border border-slate-100 hover:scale-105 active:scale-95 transition-all"><IconChevronLeft size={24}/></button><h2 className="text-2xl sm:text-4xl font-black text-stone-900 uppercase tracking-tight line-clamp-1">{activeExam.title}</h2></div>
-              <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto"><button type="button" onClick={handleExportCSV} className="flex-1 sm:flex-none justify-center bg-white text-indigo-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 border border-indigo-100 shadow-sm hover:bg-indigo-50 transition-all"><IconDownload size={16}/> YEDEKLE</button><button type="button" onClick={handlePrint} className="flex-1 sm:flex-none justify-center bg-slate-900 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 hover:bg-slate-800 shadow-md transition-all"><IconPrinter size={16}/> <span className="hidden sm:inline">YAZDIR /</span> PDF</button></div>
+              <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto"><button type="button" onClick={handleExportExcel} className="flex-1 sm:flex-none justify-center bg-white text-indigo-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 border border-indigo-100 shadow-sm hover:bg-indigo-50 transition-all"><IconDownload size={16}/> EXCEL</button><button type="button" onClick={handlePrint} className="flex-1 sm:flex-none justify-center bg-slate-900 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 hover:bg-slate-800 shadow-md transition-all"><IconPrinter size={16}/> <span className="hidden sm:inline">YAZDIR /</span> PDF</button></div>
             </div>
             
             <div id="report-content" className="space-y-6 sm:space-y-8 print:m-0 print:p-0">
@@ -1114,7 +1105,6 @@ const App = () => {
                  </div>
               </div>
 
-              {/* PDF İÇİN DETAYLI ÖĞRENCİ CEVAP KAĞITLARI BÖLÜMÜ */}
               {submissions.filter(s=>s.examId===activeExam.id).length > 0 && (
                   <div className="pt-12 sm:pt-16 mt-8 sm:mt-12 border-t-2 border-dashed border-slate-200">
                       <h3 className="font-black text-2xl sm:text-3xl uppercase tracking-tighter text-slate-800 mb-8 sm:mb-10 text-center print:text-left print:mt-10">Öğrenci Cevap Kağıtları</h3>
@@ -1217,12 +1207,12 @@ const App = () => {
                         <div key={qIdx} className="bg-slate-50 p-5 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-slate-200">
                             <p className="text-sm sm:text-base font-black text-slate-800 mb-4 uppercase leading-snug">{qIdx + 1}. {qd.questionText}</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                <div className={"p-3 sm:p-4 rounded-xl border-2 flex flex-col " + (finalEarned === 1 ? "bg-green-50 border-green-200 text-green-700" : (finalEarned > 0 ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-red-50 border-red-200 text-red-700"))}>
+                                <div className={"p-3 sm:p-4 rounded-xl border-2 flex flex-col " + (finalEarned === 1 ? "bg-green-50/50 border-green-100 text-green-800" : (finalEarned > 0 ? "bg-amber-50/50 border-amber-100 text-amber-800" : "bg-red-50/50 border-red-100 text-red-800"))}>
                                     <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Senin Cevabın</span>
                                     <span className="font-black text-xs sm:text-sm">{qd.givenAnswerText} {finalEarned === 1 ? "✅" : (finalEarned > 0 ? `⚠️ Kısmi Puan (%${Math.round(finalEarned * 100)})` : "❌")}</span>
                                 </div>
                                 {finalEarned < 1 && (
-                                    <div className="p-3 sm:p-4 rounded-xl border-2 bg-indigo-50 border-indigo-200 text-indigo-700 flex flex-col">
+                                    <div className="p-3 sm:p-4 rounded-xl border-2 bg-indigo-50/30 border-indigo-100 text-indigo-800 flex flex-col">
                                         <span className="text-[8px] sm:text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">Beklenen Cevap</span>
                                         <span className="font-black text-xs sm:text-sm">{qd.correctAnswerText}</span>
                                     </div>
