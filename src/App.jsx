@@ -211,7 +211,7 @@ const App = () => {
   const handleTeacherLogin = async () => {
     if (!adminEmail || !passwordInput) return showModal("Hata", "Lütfen e-posta ve şifrenizi girin.", "error");
     try {
-      // Şifreyi koddan okumak yerine Firebase sunucularına soruyoruz
+      // Firebase sunucusuna giriş isteği atıyoruz
       await signInWithEmailAndPassword(auth, adminEmail, passwordInput);
       setIsTeacher(true); 
       setShowPassModal(false); 
@@ -219,7 +219,9 @@ const App = () => {
       setPasswordInput('');
       setAdminEmail('');
     } catch (error) {
-      showModal("Hata", "E-posta veya şifre hatalı. Yetkisiz giriş!", "error");
+      // Hatanın tam kodunu ekrana yazdırıyoruz ki sorunu net görelim
+      console.error("FIREBASE GİRİŞ HATASI:", error.code, error.message);
+      showModal("Giriş Reddedildi", `Firebase Hata Kodu:\n${error.code}\n\nLütfen Firebase 'Users' sekmesinde bu kullanıcının ekli olduğundan ve şifrenin doğruluğundan emin olun.`, "error");
     }
   };
 
