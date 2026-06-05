@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, onSnapshot, doc, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
 // Oluşturduğunuz yeni modülleri içeri aktarıyoruz
 import { db, auth, appId } from './config/firebase';
@@ -21,7 +21,7 @@ const App = () => {
   const [showPassModal, setShowPassModal] = useState(false);
   const [modal, setModal] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
   
-  const ADMIN_PASSWORD = "admin123"; 
+  const [adminEmail, setAdminEmail] = useState('');
 
   const [exams, setExams] = useState([]);
   const [submissions, setSubmissions] = useState([]);
@@ -208,10 +208,19 @@ const App = () => {
   const showModal = (title, message, type = 'info', onConfirm = null) => setModal({ visible: true, title, message, type, onConfirm });
   const closeModal = () => setModal({ ...modal, visible: false });
 
-  const handleTeacherLogin = () => {
-    if (passwordInput === ADMIN_PASSWORD) {
-      setIsTeacher(true); setShowPassModal(false); setView('teacher'); setPasswordInput('');
-    } else showModal("Hata", "Yanlış şifre!", "error");
+  const handleTeacherLogin = async () => {
+    if (!adminEmail || !passwordInput) return showModal("Hata", "Lütfen e-posta ve şifrenizi girin.", "error");
+    try {
+      // Şifreyi koddan okumak yerine Firebase sunucularına soruyoruz
+      await signInWithEmailAndPassword(auth, adminEmail, passwordInput);
+      setIsTeacher(true); 
+      setShowPassModal(false); 
+      setView('teacher'); 
+      setPasswordInput('');
+      setAdminEmail('');
+    } catch (error) {
+      showModal("Hata", "E-posta veya şifre hatalı. Yetkisiz giriş!", "error");
+    }
   };
 
   const handleCopyLink = (e, exam) => {
@@ -508,7 +517,7 @@ const App = () => {
         </div>
         <div className="flex gap-2 sm:gap-4">
           {!isTeacher ? ( <button type="button" onClick={() => setShowPassModal(true)} className="flex items-center gap-1 sm:gap-2 font-bold text-slate-500 hover:text-indigo-600 transition-colors text-xs sm:text-base"><IconLock size={16}/> <span className="hidden sm:inline">Panel</span></button>
-          ) : ( <><button type="button" onClick={() => { setNewExam({ title: '', duration: 30, examCode: '', questions: [] }); setEditingQIdx(null); setView('teacher'); }} className="bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-base">Yönetim</button><button type="button" onClick={() => { setIsTeacher(false); setView('landing'); setExamResult(null); }} className="flex items-center gap-1 sm:gap-2 font-bold text-red-500 px-2 transition-colors hover:text-red-700 text-xs sm:text-base"><IconLogOut size={16}/> <span className="hidden sm:inline">Çıkış</span></button></> )}
+          ) : ( <><button type="button" onClick={() => { setNewExam({ title: '', duration: 30, examCode: '', questions: [] }); setEditingQIdx(null); setView('teacher'); }} className="bg-indigo-50 text-indigo-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-base">Yönetim</button><button type="button" onClick={async () => { await signOut(auth); await signInAnonymously(auth); setIsTeacher(false); setView('landing'); setExamResult(null); }} className="flex items-center gap-1 sm:gap-2 font-bold text-red-500 px-2 transition-colors hover:text-red-700 text-xs sm:text-base"><IconLogOut size={16}/> <span className="hidden sm:inline">Çıkış</span></button></> )}
           <button type="button" onClick={() => { setView('student'); setExamResult(null); }} className="bg-indigo-600 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl font-black shadow-xl hover:bg-indigo-700 transition-all text-xs sm:text-base">SINAVA GİR</button>
         </div>
       </nav>
@@ -517,7 +526,8 @@ const App = () => {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 print:hidden">
           <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 max-w-sm w-full shadow-2xl text-center border-t-8 border-indigo-600">
             <h3 className="text-xl sm:text-2xl font-black mb-6 uppercase">Yönetici Girişi</h3>
-            <input type="password" autoFocus className="w-full p-4 sm:p-5 bg-slate-50 border-none rounded-2xl sm:rounded-3xl outline-none ring-4 ring-transparent focus:ring-indigo-500 text-center mb-6 font-black text-xl sm:text-2xl tracking-widest" placeholder="••••" onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleTeacherLogin()} />
+            <input type="email" autoFocus className="w-full p-4 sm:p-5 bg-slate-50 border-none rounded-2xl sm:rounded-3xl outline-none ring-4 ring-transparent focus:ring-indigo-500 text-center mb-4 font-bold text-sm sm:text-lg placeholder:text-slate-300" placeholder="E-posta Adresiniz" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} />
+            <input type="password" className="w-full p-4 sm:p-5 bg-slate-50 border-none rounded-2xl sm:rounded-3xl outline-none ring-4 ring-transparent focus:ring-indigo-500 text-center mb-6 font-black text-xl sm:text-2xl tracking-widest placeholder:text-slate-300" placeholder="••••" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleTeacherLogin()} />
             <div className="flex gap-3"><button type="button" onClick={() => setShowPassModal(false)} className="flex-1 py-3 sm:py-4 font-bold text-slate-400 text-sm sm:text-base">İptal</button><button type="button" onClick={handleTeacherLogin} className="flex-1 py-3 sm:py-4 bg-indigo-600 text-white font-black rounded-xl sm:rounded-2xl shadow-lg text-sm sm:text-base">GİRİŞ YAP</button></div>
           </div>
         </div>
