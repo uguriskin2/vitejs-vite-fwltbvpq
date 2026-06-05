@@ -3,7 +3,7 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDLcdpVEUHpaUP2IgMuYeszaHmmhODcHH8",
+  apiKey: "AIzaSyDLcdpVEUHpaUP2IgMuYEszaHmmhODcHH8",
   authDomain: "online-sinav-2026.firebaseapp.com",
   projectId: "online-sinav-2026",
   storageBucket: "online-sinav-2026.firebasestorage.app",
