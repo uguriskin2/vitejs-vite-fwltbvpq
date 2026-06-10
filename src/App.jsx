@@ -30,8 +30,7 @@ const App = () => {
   const [deviceId, setDeviceId] = useState('');
   
   const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-  
-  const [newExam, setNewExam] = useState({ title: '', duration: 30, examCode: '', questions: [] });
+  const [newExam, setNewExam] = useState({ title: '', category: '', duration: 30, examCode: '', questions: [] });  
   const [aiText, setAiText] = useState('');
   const [aiConfig, setAiConfig] = useState({ count: 10, types: ['multiple-choice'] });
 
@@ -550,32 +549,62 @@ const App = () => {
               <div><h2 className="text-2xl sm:text-4xl font-black text-slate-900 uppercase">Sınav Merkezi</h2><p className="text-indigo-600 font-bold uppercase text-[8px] sm:text-[10px] animate-pulse mt-1">PANEL AKTİF</p></div>
               <button type="button" onClick={() => { setNewExam({ title: '', duration: 30, examCode: '', questions: [] }); setEditingQIdx(null); setView('create'); }} className="w-full sm:w-auto bg-green-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-[2rem] font-black flex items-center justify-center gap-2 shadow-lg sm:shadow-2xl hover:bg-green-700 transition-all text-sm sm:text-base"><IconPlusCircle size={20}/> YENİ SINAV</button>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
-              {exams.length === 0 ? (
-                <div className="col-span-full border-2 sm:border-4 border-dashed rounded-2xl sm:rounded-[3rem] py-20 sm:py-32 text-center text-slate-300 sm:text-slate-200 font-black text-xl sm:text-3xl uppercase bg-white/50 border-slate-200 sm:border-slate-100">Henüz Sınav Yok</div>
-              ) : exams.map(exam => {
-                const examSubs = submissions.filter(s => s.examId === exam.id);
-                const avg = examSubs.length > 0 ? (examSubs.reduce((a, b) => a + (Number(b?.score) || 0), 0) / examSubs.length).toFixed(1) : 0;
-                return (
-                  <div key={exam.id} className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-[3rem] shadow-sm border border-slate-100 group relative hover:shadow-lg transition-all">
-                    <div className="absolute top-0 right-0 p-3 sm:p-4 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all flex gap-1 sm:gap-2">
-                       <button type="button" onClick={(e) => handleCopyLink(e, exam)} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-indigo-500 hover:bg-indigo-50" title="Kodu ve Linki Kopyala"><IconLink size={18}/></button>
-                       <button type="button" onClick={(e) => { e.stopPropagation(); handleEditExam(exam); }} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-blue-500 hover:bg-blue-50" title="Sınavı Düzenle"><IconEdit size={18}/></button>
-                       <button type="button" onClick={(e) => { e.stopPropagation(); showModal("Sil", "Bu sınav kalıcı olarak silinecek. Emin misiniz?", "confirm", () => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id))); }} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-red-500 hover:bg-red-50" title="Sil"><IconTrash2 size={18}/></button>
-                    </div>
-                    <button type="button" onClick={() => { setActiveExam(exam); setView('analytics'); setSelectedSubs([]); }} className="text-left w-full h-full pt-8 lg:pt-0 pr-0 lg:pr-10">
-                      <h3 className="font-black text-lg sm:text-2xl mb-2 line-clamp-2 sm:line-clamp-1 uppercase text-indigo-900 tracking-tight">{exam.title}</h3>
-                      <p className="text-xs sm:text-sm font-bold text-indigo-500 mb-4 sm:mb-6 bg-indigo-50 inline-block px-2 sm:px-3 py-1 rounded-md sm:rounded-lg border border-indigo-100">KOD: {exam.examCode}</p>
-                      <div className="grid grid-cols-2 gap-2 text-center mb-6 sm:mb-8">
-                        <div className="bg-slate-50 p-2 rounded-xl sm:rounded-2xl border border-slate-100"><p className="text-[7px] sm:text-[8px] font-black text-slate-400 uppercase">Soru</p><p className="font-black text-sm sm:text-base text-slate-700">{exam.questions?.length || 0}</p></div>
-                        <div className="bg-green-50 p-2 rounded-xl sm:rounded-2xl border border-green-100"><p className="text-[7px] sm:text-[8px] font-black text-green-600 uppercase">Ort. Puan</p><p className="font-black text-sm sm:text-base text-green-700">{avg}</p></div>
-                      </div>
-                      <div className="w-full py-3 sm:py-4 bg-slate-900 text-white rounded-xl sm:rounded-2xl text-center font-black text-[10px] sm:text-xs uppercase tracking-widest hover:bg-indigo-600 transition-colors">Analizi Gör</div>
-                    </button>
+            <div className="space-y-12">
+  {(() => {
+    // 1. Sadece giriş yapan öğretmenin kendi sınavlarını filtrele
+    const myExams = exams.filter(exam => exam.userId === user?.uid);
+
+    if (myExams.length === 0) {
+      return <div className="border-2 sm:border-4 border-dashed rounded-2xl sm:rounded-[3rem] py-20 sm:py-32 text-center text-slate-300 font-black text-xl sm:text-3xl uppercase bg-white/50 border-slate-200">Henüz Sınavınız Yok</div>;
+    }
+
+    // 2. Sınavları 'category' alanına göre grupla
+    const groupedExams = myExams.reduce((acc, exam) => {
+      const cat = exam.category || 'KATEGORİSİZ DERSLER';
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(exam);
+      return acc;
+    }, {});
+
+    // 3. Gruplanmış sınavları ekrana bas
+    return Object.entries(groupedExams).map(([categoryName, catExams]) => (
+      <div key={categoryName} className="space-y-4">
+        {/* Kategori Başlığı (Klasör Görünümü) */}
+        <div className="flex items-center gap-3 border-b-2 border-slate-200 pb-2">
+          <IconBookOpen size={24} className="text-indigo-600" />
+          <h3 className="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">{categoryName}</h3>
+          <span className="bg-slate-200 text-slate-500 font-black text-[10px] px-2 py-1 rounded-full">{catExams.length} Sınav</span>
+        </div>
+
+        {/* O Kategoriye Ait Sınavların Kartları */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
+          {catExams.map(exam => {
+            const examSubs = submissions.filter(s => s.examId === exam.id);
+            const avg = examSubs.length > 0 ? (examSubs.reduce((a, b) => a + (Number(b?.score) || 0), 0) / examSubs.length).toFixed(1) : 0;
+            return (
+              <div key={exam.id} className="bg-white p-5 sm:p-8 rounded-2xl sm:rounded-[3rem] shadow-sm border border-slate-100 group relative hover:shadow-lg transition-all">
+                <div className="absolute top-0 right-0 p-3 sm:p-4 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all flex gap-1 sm:gap-2">
+                   <button type="button" onClick={(e) => handleCopyLink(e, exam)} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-indigo-500 hover:bg-indigo-50" title="Kodu ve Linki Kopyala"><IconLink size={18}/></button>
+                   <button type="button" onClick={(e) => { e.stopPropagation(); handleEditExam(exam); }} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-blue-500 hover:bg-blue-50" title="Sınavı Düzenle"><IconEdit size={18}/></button>
+                   <button type="button" onClick={(e) => { e.stopPropagation(); showModal("Sil", "Bu sınav kalıcı olarak silinecek. Emin misiniz?", "confirm", () => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id))); }} className="bg-white shadow-sm sm:shadow-md p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-red-500 hover:bg-red-50" title="Sil"><IconTrash2 size={18}/></button>
+                </div>
+                <button type="button" onClick={() => { setActiveExam(exam); setView('analytics'); setSelectedSubs([]); }} className="text-left w-full h-full pt-8 lg:pt-0 pr-0 lg:pr-10">
+                  <h3 className="font-black text-lg sm:text-2xl mb-2 line-clamp-2 sm:line-clamp-1 uppercase text-indigo-900 tracking-tight">{exam.title}</h3>
+                  <p className="text-xs sm:text-sm font-bold text-indigo-500 mb-4 sm:mb-6 bg-indigo-50 inline-block px-2 sm:px-3 py-1 rounded-md sm:rounded-lg border border-indigo-100">KOD: {exam.examCode}</p>
+                  <div className="grid grid-cols-2 gap-2 text-center mb-6 sm:mb-8">
+                    <div className="bg-slate-50 p-2 rounded-xl sm:rounded-2xl border border-slate-100"><p className="text-[7px] sm:text-[8px] font-black text-slate-400 uppercase">Soru</p><p className="font-black text-sm sm:text-base text-slate-700">{exam.questions?.length || 0}</p></div>
+                    <div className="bg-green-50 p-2 rounded-xl sm:rounded-2xl border border-green-100"><p className="text-[7px] sm:text-[8px] font-black text-green-600 uppercase">Ort. Puan</p><p className="font-black text-sm sm:text-base text-green-700">{avg}</p></div>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="w-full py-3 sm:py-4 bg-slate-900 text-white rounded-xl sm:rounded-2xl text-center font-black text-[10px] sm:text-xs uppercase tracking-widest hover:bg-indigo-600 transition-colors">Analizi Gör</div>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    ));
+  })()}
+</div>
           </div>
         )}
 
@@ -585,11 +614,15 @@ const App = () => {
                <div className="bg-white p-6 sm:p-12 rounded-2xl sm:rounded-[3.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-10"><button type="button" onClick={() => setView('teacher')} className="p-2 sm:p-3 bg-stone-50 rounded-xl sm:rounded-2xl text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><IconChevronLeft size={24}/></button><h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-stone-900">{newExam.id ? 'Sınavı Düzenle' : 'Sınav Tasarla'}</h2></div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
-                     <input className="w-full sm:col-span-1 p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border focus:border-indigo-500 transition-colors placeholder:text-slate-300" placeholder="BAŞLIK (Örn: Matematik)" value={newExam.title} onChange={e => setNewExam({...newExam, title: toTRUpper(e.target.value)})} />
-                     <input className="w-full sm:col-span-1 p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border focus:border-indigo-500 transition-colors placeholder:text-slate-300" type="number" placeholder="SÜRE (DK)" value={newExam.duration} onChange={e => setNewExam({...newExam, duration: parseInt(e.target.value) || 0})} />
-                     <input className="w-full sm:col-span-1 p-4 sm:p-5 bg-indigo-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border-2 border-indigo-200 focus:border-indigo-500 transition-colors uppercase tracking-widest text-indigo-700 placeholder-indigo-300" placeholder="GİRİŞ KODU (Örn: MAT1)" value={newExam.examCode} onChange={e => setNewExam({...newExam, examCode: toTRUpper(e.target.value)})} />
-                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-12">
+   <input className="w-full p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border focus:border-indigo-500 transition-colors placeholder:text-slate-300" placeholder="BAŞLIK (Örn: 1. Dönem 1. Yazılı)" value={newExam.title} onChange={e => setNewExam({...newExam, title: toTRUpper(e.target.value)})} />
+   
+   {/* YENİ EKLENEN KATEGORİ ALANI */}
+   <input className="w-full p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border focus:border-indigo-500 transition-colors placeholder:text-slate-300" placeholder="DERS/KATEGORİ (Örn: Fen Bilimleri)" value={newExam.category} onChange={e => setNewExam({...newExam, category: toTRUpper(e.target.value)})} />
+   
+   <input className="w-full p-4 sm:p-5 bg-slate-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border focus:border-indigo-500 transition-colors placeholder:text-slate-300" type="number" placeholder="SÜRE (DK)" value={newExam.duration} onChange={e => setNewExam({...newExam, duration: parseInt(e.target.value) || 0})} />
+   <input className="w-full p-4 sm:p-5 bg-indigo-50 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-base outline-none shadow-inner border-2 border-indigo-200 focus:border-indigo-500 transition-colors uppercase tracking-widest text-indigo-700 placeholder-indigo-300" placeholder="GİRİŞ KODU (Örn: FEN6)" value={newExam.examCode} onChange={e => setNewExam({...newExam, examCode: toTRUpper(e.target.value)})} />
+</div>
                   
                   <div className="bg-indigo-900 rounded-2xl sm:rounded-[3rem] p-5 sm:p-10 text-white shadow-xl sm:shadow-2xl mb-8 sm:mb-12">
                      <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8"><IconActivitySmall size={32} className="text-indigo-200" /><div><h3 className="text-lg sm:text-xl font-black uppercase tracking-widest leading-none">✨ AI Sihirbazı</h3><p className="text-[10px] sm:text-xs text-indigo-300 font-bold mt-0.5 sm:mt-1 uppercase">Belge ve Metinden Soru Üretin</p></div></div>
