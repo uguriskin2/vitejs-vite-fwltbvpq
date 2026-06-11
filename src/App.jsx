@@ -350,15 +350,25 @@ const App = () => {
     }
     try {
       if (newExam.id) {
+          // Güncelleme yaparken category alanını da Firestore'a gönderiyoruz
           await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', newExam.id), {
-              title: newExam.title, duration: newExam.duration, examCode: newExam.examCode, questions: newExam.questions
+              title: newExam.title,
+              category: newExam.category || 'KATEGORİSİZ DERSLER',
+              duration: newExam.duration,
+              examCode: newExam.examCode,
+              questions: newExam.questions
           });
           showModal("Başarılı", "Sınav değişiklikleri başarıyla kaydedildi.", "success");
       } else {
-          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'exams'), { ...newExam, createdAt: serverTimestamp(), userId: user.uid });
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'exams'), { 
+              ...newExam, 
+              category: newExam.category || 'KATEGORİSİZ DERSLER',
+              createdAt: serverTimestamp(), 
+              userId: user.uid 
+          });
           showModal("Başarılı", "Yeni sınav başarıyla oluşturuldu.", "success");
       }
-      setNewExam({ title: '', duration: 30, examCode: '', questions: [] });
+      setNewExam({ title: '', category: '', duration: 30, examCode: '', questions: [] });
       setView('teacher');
     } catch (e) { showModal("Uyarı", "Bağlantı hatası: Sınav işleminiz gerçekleşmedi.", "error"); }
   };
