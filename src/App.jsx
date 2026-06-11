@@ -168,9 +168,18 @@ const App = () => {
 
   useEffect(() => {
     let isMounted = true;
-    const initAuth = async () => { try { await signInAnonymously(auth); } catch (e) {} };
-    initAuth();
-    const unsub = onAuthStateChanged(auth, (u) => { if(isMounted) setUser(u || {uid: 'test-user'}); });
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (isMounted) {
+        if (u) {
+          // Eğer zaten giriş yapmış bir kullanıcı (Öğretmen veya eski Anonim) varsa onu koru
+          setUser(u);
+          setLoading(false);
+        } else {
+          // Yalnızca sistemde HİÇBİR oturum yoksa anonim giriş başlat
+          signInAnonymously(auth).catch(e => console.error("Anonim giriş hatası:", e));
+        }
+      }
+    });
     return () => { isMounted = false; unsub(); };
   }, []);
 
@@ -552,7 +561,8 @@ const App = () => {
             <div className="space-y-12">
   {(() => {
     // 1. Sadece giriş yapan öğretmenin kendi sınavlarını filtrele
-    const myExams = exams.filter(exam => exam.userId === user?.uid);
+    // Hem kendi oluşturduğunuz sınavları hem de geçmişten kalan (userId alanı boş olan) tüm sınavları listeler
+    const myExams = exams.filter(exam => !exam.userId || exam.userId === user?.uid);
 
     if (myExams.length === 0) {
       return <div className="border-2 sm:border-4 border-dashed rounded-2xl sm:rounded-[3rem] py-20 sm:py-32 text-center text-slate-300 font-black text-xl sm:text-3xl uppercase bg-white/50 border-slate-200">Henüz Sınavınız Yok</div>;
